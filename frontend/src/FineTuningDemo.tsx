@@ -41,7 +41,7 @@ import {
   saveModel,
   type SavedModel,
 } from "@/services/api";
-import { ChatMessage } from "@/components/chat/ChatMessage";
+import { ChatMessage as ChatMessageComponent } from "@/components/chat/ChatMessage";
 import { FineTuningPresetSelector } from "@/components/aicomponent/FineTuningPresetSelector";
 import { type FineTuningPreset } from "@/presets";
 
@@ -502,7 +502,7 @@ export function FineTuningDemo() {
           </CardHeader>
           <CardContent className="flex-1 overflow-auto space-y-2">
             {assistantMessages.map((m) => (
-              <ChatMessage key={m.id} message={m} />
+              <ChatMessageComponent key={m.id} message={m} />
             ))}
           </CardContent>
           <div className="p-2 border-t border-border flex gap-2 bg-black/50">

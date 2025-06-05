@@ -10,6 +10,30 @@ This backend is built with [FastAPI](https://fastapi.tiangolo.com/) and uses Mon
 - `app/services` - business logic and database interactions
 - `app/schemas` - Pydantic models used for requests and responses
 
+### Ollama Integration
+
+Ollama is used for running local models. Fine-tune a base model using external
+tools (e.g. Hugging Face Transformers, PEFT or Unsloth), then convert the
+resulting checkpoint to the GGUF format with `llama.cpp`. Create a `Modelfile`
+that references the GGUF file:
+
+```text
+FROM ./path/to/your-model.gguf
+TEMPLATE """{{ if .System }}\n{{ .System }}\n{{ end }}\n{{ .Prompt }}"""
+```
+
+Load the model into Ollama with:
+
+```bash
+ollama create mymodel -f Modelfile
+```
+
+The API exposes the following new endpoints:
+
+- `GET /api/v1/ollama/models` - list locally available models
+- `POST /api/v1/ollama/pull` - download a model
+- `POST /api/v1/ollama/chat` - generate chat completions using a model
+
 ### New Endpoints
 
 - `POST /api/v1/user-models/` - save parameters and results as a model

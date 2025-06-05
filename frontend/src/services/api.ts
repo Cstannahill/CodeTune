@@ -56,3 +56,34 @@ export async function importModel(modelId: string) {
   if (!res.ok) throw new Error('Import failed');
   return res.json();
 }
+
+// Ollama endpoints
+export async function fetchOllamaModels(): Promise<string[]> {
+  const res = await fetch(`${API_URL}/api/v1/ollama/models`);
+  if (!res.ok) throw new Error('Failed to list models');
+  return res.json();
+}
+
+export async function pullOllamaModel(model: string) {
+  const res = await fetch(`${API_URL}/api/v1/ollama/pull`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model }),
+  });
+  if (!res.ok) throw new Error('Pull failed');
+  return res.json();
+}
+
+export async function ollamaChat(
+  messages: ChatMessage[],
+  model: string,
+): Promise<string> {
+  const res = await fetch(`${API_URL}/api/v1/ollama/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, model }),
+  });
+  if (!res.ok) throw new Error('Ollama chat failed');
+  const data = await res.json();
+  return data.response as string;
+}
