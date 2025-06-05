@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { fetchModels } from "@/services/api";
+import { fetchModels, fetchOllamaModels } from "@/services/api";
 
 interface Props {
   value: string;
@@ -11,8 +11,8 @@ export function AIModelSelector({ value, onValueChange }: Props) {
   const [models, setModels] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchModels()
-      .then((ms) => setModels(ms.map((m) => m.id)))
+    Promise.all([fetchModels(), fetchOllamaModels()])
+      .then(([hf, local]) => setModels([...hf.map((m) => m.id), ...local]))
       .catch(() => setModels([]));
   }, []);
 

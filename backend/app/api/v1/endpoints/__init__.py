@@ -3,6 +3,7 @@ from .analytics import router as analytics_router
 from .assistant import router as assistant_router
 from .models import router as models_router
 from .user_models import router as user_models_router
+from .ollama import router as ollama_router
 
 __all__ = [
     "tuning_router",
@@ -10,4 +11,5 @@ __all__ = [
     "assistant_router",
     "models_router",
     "user_models_router",
+    "ollama_router",
 ]
