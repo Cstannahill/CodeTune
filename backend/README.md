@@ -10,6 +10,12 @@ This backend is built with [FastAPI](https://fastapi.tiangolo.com/) and uses Mon
 - `app/services` - business logic and database interactions
 - `app/schemas` - Pydantic models used for requests and responses
 
+### New Endpoints
+
+- `POST /api/v1/user-models/` - save parameters and results as a model
+- `POST /api/v1/user-models/import/{model_id}` - start a new tuning job from a saved model
+- `GET /api/v1/user-models/` - list saved models
+
 ## Development
 
 Create a `.env` file (see `.env.example`) or set the following environment variables:
