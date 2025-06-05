@@ -1,4 +1,23 @@
 import { useState } from "react";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+);
 import { Brain, Send } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +61,7 @@ export function FineTuningDemo() {
   const [assistantInput, setAssistantInput] = useState("");
   const [training, setTraining] = useState(false);
   const [preset, setPreset] = useState<FineTuningPreset | null>(null);
+  const [trainingHistory, setTrainingHistory] = useState<number[]>([]);
 
 
   const buildRequest = (): FineTuningRequest => ({
@@ -86,13 +106,18 @@ export function FineTuningDemo() {
     setTrainingProgress(0);
     setAnalysis(null);
     setQualityLoss(null);
+    setTrainingHistory([]);
+    const losses: number[] = [];
     for (let i = 1; i <= epochs; i++) {
       await new Promise((r) => setTimeout(r, 500));
+      const loss = Math.max(0, 5 - (i * (5 / epochs)) + Math.random());
+      losses.push(parseFloat(loss.toFixed(2)));
+      setTrainingHistory([...losses]);
       setTrainingProgress(Math.round((i / epochs) * 100));
     }
     setTraining(false);
     setAnalysis("Training complete");
-    setQualityLoss(Number((Math.random() * 5).toFixed(2)));
+    setQualityLoss(losses[losses.length - 1]);
   };
 
   const handleAssistantSend = async () => {
@@ -128,6 +153,7 @@ export function FineTuningDemo() {
             <TabsTrigger value="tuning">Fine-Tuning</TabsTrigger>
             <TabsTrigger value="datasets">Dataset Details</TabsTrigger>
             <TabsTrigger value="params">Training Parameters</TabsTrigger>
+            <TabsTrigger value="results">Results</TabsTrigger>
           </TabsList>
 
 
@@ -387,6 +413,43 @@ export function FineTuningDemo() {
                     </TableRow>
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="results" className="space-y-6">
+            <Card className="bg-black/20 border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-white">Training Results</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {trainingHistory.length > 0 ? (
+                  <Line
+                    options={{
+                      responsive: true,
+                      plugins: { legend: { display: false } },
+                      scales: { y: { beginAtZero: true } },
+                    }}
+                    data={{
+                      labels: trainingHistory.map((_, i) => `Epoch ${i + 1}`),
+                      datasets: [
+                        {
+                          label: "Loss",
+                          data: trainingHistory,
+                          borderColor: "rgb(99,102,241)",
+                          backgroundColor: "rgba(99,102,241,0.5)",
+                        },
+                      ],
+                    }}
+                  />
+                ) : (
+                  <p className="text-gray-300">No training results yet.</p>
+                )}
+                {qualityLoss !== null && (
+                  <p className="text-sm text-gray-300">
+                    Final loss: {qualityLoss}
+                  </p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
