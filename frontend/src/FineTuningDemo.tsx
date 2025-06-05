@@ -43,6 +43,8 @@ import {
   type SavedModel,
   createTuning,
   getTuningProgress,
+  fetchModels,
+  fetchOllamaModels,
 } from "@/services/api";
 import { ChatMessage as ChatMessageComponent } from "@/components/chat/ChatMessage";
 import { FineTuningPresetSelector } from "@/components/aicomponent/FineTuningPresetSelector";
@@ -67,12 +69,22 @@ export function FineTuningDemo() {
   const [trainingHistory, setTrainingHistory] = useState<number[]>([]);
   const [savedModels, setSavedModels] = useState<SavedModel[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [testModel, setTestModel] = useState<string>("gpt-3.5-turbo");
+  const [testMessages, setTestMessages] = useState<SimpleMessage[]>([]);
+  const [testInput, setTestInput] = useState("");
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchSavedModels()
       .then(setSavedModels)
       .catch(() => setSavedModels([]));
+  }, []);
+
+  useEffect(() => {
+    Promise.all([fetchModels(), fetchOllamaModels()])
+      .then(([hf, local]) => setAvailableModels([...hf.map((m) => m.id), ...local]))
+      .catch(() => setAvailableModels([]));
   }, []);
 
   useEffect(() => {
@@ -196,6 +208,32 @@ export function FineTuningDemo() {
       timestamp: new Date(),
     };
     setAssistantMessages((prev) => [...prev, aiMsg]);
+  };
+
+  const handleTestSend = async () => {
+    if (!testInput.trim()) return;
+    const userMsg: SimpleMessage = {
+      id: Date.now().toString() + "_test_user",
+      type: "player",
+      sender: "You",
+      content: testInput,
+      timestamp: new Date(),
+    };
+    setTestMessages((prev) => [...prev, userMsg]);
+    setTestInput("");
+    const chatHistory: ChatMessage[] = [...testMessages, userMsg].map((m) => ({
+      role: m.type === "dm" ? "assistant" : "user",
+      content: m.content,
+    }));
+    const response = await assistantChat(chatHistory, testModel);
+    const aiMsg: SimpleMessage = {
+      id: Date.now().toString() + "_test_ai",
+      type: "dm",
+      sender: testModel,
+      content: response,
+      timestamp: new Date(),
+    };
+    setTestMessages((prev) => [...prev, aiMsg]);
   };
 
   return (
@@ -542,6 +580,46 @@ export function FineTuningDemo() {
                 ) : (
                   <p className="text-gray-300">No saved models.</p>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card className="bg-black/20 border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-white">Model Tester</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground">Select Model</label>
+                  <Select value={testModel} onValueChange={setTestModel}>
+                    <SelectTrigger className="w-56 bg-card border border-border">
+                      <SelectValue placeholder="Choose model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableModels.map((m) => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                      {savedModels.map((m) => (
+                        <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="h-60 overflow-auto space-y-2 border border-border p-2 rounded-md bg-black/30">
+                  {testMessages.map((m) => (
+                    <ChatMessageComponent key={m.id} message={m} />
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={testInput}
+                    onChange={(e) => setTestInput(e.target.value)}
+                    placeholder="Type a prompt..."
+                    className="flex-1 bg-card border border-border"
+                  />
+                  <Button onClick={handleTestSend} disabled={!testInput.trim()} className="bg-primary hover:bg-primary/80">
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

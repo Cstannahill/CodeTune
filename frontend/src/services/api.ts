@@ -10,11 +10,14 @@ export async function fetchModels(): Promise<HFModel[]> {
 
 export interface ChatMessage { role: 'user' | 'assistant' | 'system'; content: string }
 
-export async function assistantChat(messages: ChatMessage[]): Promise<string> {
+export async function assistantChat(
+  messages: ChatMessage[],
+  model?: string,
+): Promise<string> {
   const res = await fetch(`${API_URL}/api/v1/assistant/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify({ messages, model }),
   });
   if (!res.ok) throw new Error('Assistant request failed');
   const data = await res.json();
