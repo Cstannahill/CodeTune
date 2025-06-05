@@ -1,5 +1,7 @@
 # React + TypeScript + Vite
 
+Create a `.env` file based on `.env.example` to configure the backend API URL.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

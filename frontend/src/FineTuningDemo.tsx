@@ -34,19 +34,12 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import type { SimpleMessage } from "@/components/chat/ChatMessage";
-import { testFineTunedDM, type FineTuningRequest } from "@/services/api-mock";
+import { assistantChat, type ChatMessage } from "@/services/api";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { FineTuningPresetSelector } from "@/components/aicomponent/FineTuningPresetSelector";
 import { type FineTuningPreset } from "@/presets";
 
 export function FineTuningDemo() {
-  const [personality] = useState("classic");
-  const [prompt] = useState("You are a helpful dungeon master.");
-  const [keywords] = useState("");
-  const [model] = useState("gpt-4");
-  const [temperature] = useState(0.7);
-  const [maxTokens] = useState(300);
-  const [trainingData] = useState("");
 
   const [activeTab, setActiveTab] = useState("tuning");
   const [datasetFile, setDatasetFile] = useState<File | null>(null);
@@ -63,28 +56,6 @@ export function FineTuningDemo() {
   const [preset, setPreset] = useState<FineTuningPreset | null>(null);
   const [trainingHistory, setTrainingHistory] = useState<number[]>([]);
 
-
-  const buildRequest = (): FineTuningRequest => ({
-    campaignStyle: personality,
-    worldDescription: prompt,
-    keyNPCs: [],
-    campaignThemes: keywords
-      .split(",")
-      .map((k) => k.trim())
-      .filter(Boolean),
-    customPrompts: trainingData
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean),
-    model,
-    temperature,
-    maxTokens,
-    trainingData,
-    trainingSteps,
-    learningRate,
-    quantization,
-    sharePublicly: false,
-  });
 
 
   const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,12 +102,16 @@ export function FineTuningDemo() {
     };
     setAssistantMessages((prev) => [...prev, userMsg]);
     setAssistantInput("");
-    const res = await testFineTunedDM(buildRequest(), userMsg.content);
+    const chatHistory: ChatMessage[] = [...assistantMessages, userMsg].map((m) => ({
+      role: m.type === "dm" ? "assistant" : "user",
+      content: m.content,
+    }));
+    const response = await assistantChat(chatHistory);
     const aiMsg: SimpleMessage = {
       id: Date.now().toString() + "_assist_ai",
       type: "dm",
       sender: "Helper AI",
-      content: res.response,
+      content: response,
       timestamp: new Date(),
     };
     setAssistantMessages((prev) => [...prev, aiMsg]);
