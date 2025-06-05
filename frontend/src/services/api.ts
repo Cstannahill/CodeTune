@@ -28,6 +28,23 @@ export interface SavedModel {
   result: Record<string, unknown> | null;
 }
 
+export interface Tuning {
+  id: string;
+  dataset_id: string;
+  parameters: Record<string, unknown>;
+  status: string;
+  progress: number;
+  result: Record<string, unknown> | null;
+}
+
+export interface TuningProgress {
+  task_id: string;
+  progress: number;
+  status: string;
+  result: Record<string, unknown> | null;
+  updated_at?: string;
+}
+
 export async function fetchSavedModels(): Promise<SavedModel[]> {
   const res = await fetch(`${API_URL}/api/v1/user-models/`);
   if (!res.ok) throw new Error('Failed to load saved models');
@@ -54,6 +71,26 @@ export async function importModel(modelId: string) {
     method: 'POST',
   });
   if (!res.ok) throw new Error('Import failed');
+  return res.json();
+}
+
+// Tuning endpoints
+export async function createTuning(payload: {
+  dataset_id: string;
+  parameters: Record<string, unknown>;
+}): Promise<Tuning> {
+  const res = await fetch(`${API_URL}/api/v1/tuning/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('Start tuning failed');
+  return res.json();
+}
+
+export async function getTuningProgress(taskId: string): Promise<TuningProgress> {
+  const res = await fetch(`${API_URL}/api/v1/tuning/${taskId}/progress`);
+  if (!res.ok) throw new Error('Progress request failed');
   return res.json();
 }
 

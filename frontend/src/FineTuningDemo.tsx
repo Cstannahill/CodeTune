@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -40,6 +40,8 @@ import {
   fetchSavedModels,
   saveModel,
   type SavedModel,
+  createTuning,
+  getTuningProgress,
 } from "@/services/api";
 import { ChatMessage as ChatMessageComponent } from "@/components/chat/ChatMessage";
 import { FineTuningPresetSelector } from "@/components/aicomponent/FineTuningPresetSelector";
@@ -63,11 +65,18 @@ export function FineTuningDemo() {
   const [trainingHistory, setTrainingHistory] = useState<number[]>([]);
   const [savedModels, setSavedModels] = useState<SavedModel[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     fetchSavedModels()
       .then(setSavedModels)
       .catch(() => setSavedModels([]));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
 
@@ -87,22 +96,43 @@ export function FineTuningDemo() {
   };
 
   const startTraining = async () => {
+    if (!datasetFile) return;
     setTraining(true);
     setTrainingProgress(0);
     setAnalysis(null);
     setQualityLoss(null);
     setTrainingHistory([]);
-    const losses: number[] = [];
-    for (let i = 1; i <= epochs; i++) {
-      await new Promise((r) => setTimeout(r, 500));
-      const loss = Math.max(0, 5 - (i * (5 / epochs)) + Math.random());
-      losses.push(parseFloat(loss.toFixed(2)));
-      setTrainingHistory([...losses]);
-      setTrainingProgress(Math.round((i / epochs) * 100));
-    }
-    setTraining(false);
-    setAnalysis("Training complete");
-    setQualityLoss(losses[losses.length - 1]);
+    const task = await createTuning({
+      dataset_id: datasetFile.name,
+      parameters: {
+        epochs,
+        trainingSteps,
+        learningRate,
+        quantization,
+      },
+    });
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(async () => {
+      try {
+        const prog = await getTuningProgress(task.id);
+        const pct = prog.progress <= 1 ? prog.progress * 100 : prog.progress;
+        setTrainingProgress(Math.round(pct));
+        if (prog.result && "loss" in prog.result) {
+          setQualityLoss(prog.result.loss as number);
+        }
+        if (prog.status === "completed" || prog.status === "failed") {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          setTraining(false);
+          setAnalysis(
+            prog.status === "completed" ? "Training complete" : "Training failed"
+          );
+        }
+      } catch {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setTraining(false);
+        setAnalysis("Error fetching progress");
+      }
+    }, 2000);
   };
 
   const handleSaveModel = async () => {
