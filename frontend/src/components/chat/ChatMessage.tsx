@@ -8,7 +8,7 @@ export interface SimpleMessage {
   timestamp: Date;
 }
 
-export function ChatMessage({ message }: { message: SimpleMessage }) {
+export function ChatMessageComp({ message }: { message: SimpleMessage }) {
   const isAI = message.type === "dm";
   return (
     <div

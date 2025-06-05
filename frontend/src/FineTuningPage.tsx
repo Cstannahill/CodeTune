@@ -16,13 +16,19 @@ ChartJS.register(
   PointElement,
   LineElement,
   Tooltip,
-  Legend,
+  Legend
 );
 import { Brain, Send } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -35,12 +41,11 @@ import {
 } from "@/components/ui/table";
 import type { SimpleMessage } from "@/components/chat/ChatMessage";
 import { assistantChat, type ChatMessage } from "@/services/api";
-import { ChatMessage } from "@/components/chat/ChatMessage";
+import { ChatMessageComp } from "@/components/chat/ChatMessage";
 import { FineTuningPresetSelector } from "@/components/aicomponent/FineTuningPresetSelector";
 import { type FineTuningPreset } from "@/presets";
 
-export function FineTuningDemo() {
-
+export function FineTuningPage() {
   const [activeTab, setActiveTab] = useState("tuning");
   const [datasetFile, setDatasetFile] = useState<File | null>(null);
   const [epochs, setEpochs] = useState(3);
@@ -50,13 +55,13 @@ export function FineTuningDemo() {
   const [trainingProgress, setTrainingProgress] = useState(0);
   const [qualityLoss, setQualityLoss] = useState<number | null>(null);
   const [analysis, setAnalysis] = useState<string | null>(null);
-  const [assistantMessages, setAssistantMessages] = useState<SimpleMessage[]>([]);
+  const [assistantMessages, setAssistantMessages] = useState<SimpleMessage[]>(
+    []
+  );
   const [assistantInput, setAssistantInput] = useState("");
   const [training, setTraining] = useState(false);
   const [preset, setPreset] = useState<FineTuningPreset | null>(null);
   const [trainingHistory, setTrainingHistory] = useState<number[]>([]);
-
-
 
   const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -81,7 +86,7 @@ export function FineTuningDemo() {
     const losses: number[] = [];
     for (let i = 1; i <= epochs; i++) {
       await new Promise((r) => setTimeout(r, 500));
-      const loss = Math.max(0, 5 - (i * (5 / epochs)) + Math.random());
+      const loss = Math.max(0, 5 - i * (5 / epochs) + Math.random());
       losses.push(parseFloat(loss.toFixed(2)));
       setTrainingHistory([...losses]);
       setTrainingProgress(Math.round((i / epochs) * 100));
@@ -102,10 +107,12 @@ export function FineTuningDemo() {
     };
     setAssistantMessages((prev) => [...prev, userMsg]);
     setAssistantInput("");
-    const chatHistory: ChatMessage[] = [...assistantMessages, userMsg].map((m) => ({
-      role: m.type === "dm" ? "assistant" : "user",
-      content: m.content,
-    }));
+    const chatHistory: ChatMessage[] = [...assistantMessages, userMsg].map(
+      (m) => ({
+        role: m.type === "dm" ? "assistant" : "user",
+        content: m.content,
+      })
+    );
     const response = await assistantChat(chatHistory);
     const aiMsg: SimpleMessage = {
       id: Date.now().toString() + "_assist_ai",
@@ -123,7 +130,11 @@ export function FineTuningDemo() {
         <h1 className="text-3xl font-bold text-white flex items-center gap-2">
           <Brain className="w-6 h-6" /> Fine-Tune AI DM
         </h1>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
           <TabsList>
             <TabsTrigger value="tuning">Fine-Tuning</TabsTrigger>
             <TabsTrigger value="datasets">Dataset Details</TabsTrigger>
@@ -131,32 +142,41 @@ export function FineTuningDemo() {
             <TabsTrigger value="results">Results</TabsTrigger>
           </TabsList>
 
-
           <TabsContent value="tuning" className="space-y-6">
             <Card className="bg-black/20 border-purple-500/20">
               <CardHeader>
-                <CardTitle className="text-white">Training Configuration</CardTitle>
+                <CardTitle className="text-white">
+                  Training Configuration
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Upload Dataset</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
+                    Upload Dataset
+                  </label>
                   <Input type="file" onChange={handleDatasetChange} />
                   {datasetFile && (
                     <p className="text-xs text-gray-400">{datasetFile.name}</p>
                   )}
                 </div>
-                <FineTuningPresetSelector value={preset?.id ?? null} onValueChange={applyPreset} />
+                <FineTuningPresetSelector
+                  value={preset?.id ?? null}
+                  onValueChange={applyPreset}
+                />
                 {preset && (
                   <p className="text-xs text-gray-400">{preset.description}</p>
                 )}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Training Epochs</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
+                    Training Epochs
+                  </label>
                   <Input
                     type="number"
                     min="1"
                     value={epochs}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setEpochs(parseInt(e.target.value))}
+                      setEpochs(parseInt(e.target.value))
+                    }
                     className="w-24 bg-card border border-border text-primary"
                   />
                   <p className="text-xs text-gray-400">
@@ -166,13 +186,16 @@ export function FineTuningDemo() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Training Steps</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
+                    Training Steps
+                  </label>
                   <Input
                     type="number"
                     min="1"
                     value={trainingSteps}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setTrainingSteps(parseInt(e.target.value))}
+                      setTrainingSteps(parseInt(e.target.value))
+                    }
                     className="w-24 bg-card border border-border text-primary"
                   />
                   <p className="text-xs text-gray-400">
@@ -182,14 +205,17 @@ export function FineTuningDemo() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Learning Rate</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
+                    Learning Rate
+                  </label>
                   <Input
                     type="number"
                     step="0.00001"
                     min="0"
                     value={learningRate}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setLearningRate(parseFloat(e.target.value))}
+                      setLearningRate(parseFloat(e.target.value))
+                    }
                     className="w-24 bg-card border border-border text-primary"
                   />
                   <p className="text-xs text-gray-400">
@@ -198,7 +224,9 @@ export function FineTuningDemo() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Quantization</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
+                    Quantization
+                  </label>
                   <Select value={quantization} onValueChange={setQuantization}>
                     <SelectTrigger className="bg-card border border-border text-primary w-32">
                       <SelectValue />
@@ -215,7 +243,11 @@ export function FineTuningDemo() {
                     smaller but less precise.
                   </p>
                 </div>
-                <Button onClick={startTraining} disabled={training || !datasetFile} className="bg-primary hover:bg-primary/80">
+                <Button
+                  onClick={startTraining}
+                  disabled={training || !datasetFile}
+                  className="bg-primary hover:bg-primary/80"
+                >
                   <Brain className="w-4 h-4 mr-2" />
                   {training ? "Training..." : "Start Training"}
                 </Button>
@@ -226,7 +258,8 @@ export function FineTuningDemo() {
                 )}
                 {analysis && (
                   <div className="text-sm text-gray-300">
-                    {analysis} {qualityLoss !== null && `(Quality loss: ${qualityLoss}%)`}
+                    {analysis}{" "}
+                    {qualityLoss !== null && `(Quality loss: ${qualityLoss}%)`}
                   </div>
                 )}
               </CardContent>
@@ -240,12 +273,15 @@ export function FineTuningDemo() {
               </CardHeader>
               <CardContent className="space-y-4 text-sm text-gray-300">
                 <p>
-                  Datasets should be provided in JSONL format with an{' '}
+                  Datasets should be provided in JSONL format with an{" "}
                   <code>input</code> and <code>output</code> for each example.
                 </p>
                 <p>Example:</p>
                 <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">{`{"input": "Question", "output": "Answer"}`}</pre>
-                <p>Include varied samples that reflect the tasks you want the model to learn.</p>
+                <p>
+                  Include varied samples that reflect the tasks you want the
+                  model to learn.
+                </p>
               </CardContent>
             </Card>
 
@@ -256,11 +292,12 @@ export function FineTuningDemo() {
               <CardContent className="space-y-6 text-sm text-gray-300">
                 <div className="space-y-2">
                   <p className="text-white font-semibold">
-                    Image Classification: Distinguishing Pneumonia from Chest X-rays
+                    Image Classification: Distinguishing Pneumonia from Chest
+                    X-rays
                   </p>
                   <p>JSONL snippet:</p>
                   <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
-{`{"image_path": "patient001_xray.png", "diagnosis": "pneumonia"}`}
+                    {`{"image_path": "patient001_xray.png", "diagnosis": "pneumonia"}`}
                   </pre>
                   <p>
                     About 5k–10k labeled images help a CNN learn visual patterns
@@ -274,7 +311,7 @@ export function FineTuningDemo() {
                   </p>
                   <p>JSONL snippet:</p>
                   <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
-{`{"review_id": "rev001", "review_text": "Great value!", "sentiment": "positive"}`}
+                    {`{"review_id": "rev001", "review_text": "Great value!", "sentiment": "positive"}`}
                   </pre>
                   <p>
                     Tens of thousands of reviews teach a language model to map
@@ -288,7 +325,7 @@ export function FineTuningDemo() {
                   </p>
                   <p>JSONL snippet:</p>
                   <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
-{`{"source_text": "This agreement...", "target_text": "Le présent contrat..."}`}
+                    {`{"source_text": "This agreement...", "target_text": "Le présent contrat..."}`}
                   </pre>
                   <p>
                     Hundreds of thousands of parallel sentences capture legal
@@ -303,11 +340,11 @@ export function FineTuningDemo() {
                   </p>
                   <p>JSONL snippet:</p>
                   <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
-{`{"image_id": "partA_img001.jpg", "defects": [{"label": "scratch", "bbox": [150,300,50,120]}]}`}
+                    {`{"image_id": "partA_img001.jpg", "defects": [{"label": "scratch", "bbox": [150,300,50,120]}]}`}
                   </pre>
                   <p>
-                    Thousands of annotated images let detection models locate and
-                    classify scratches, dents, or cracks.
+                    Thousands of annotated images let detection models locate
+                    and classify scratches, dents, or cracks.
                   </p>
                 </div>
 
@@ -317,7 +354,7 @@ export function FineTuningDemo() {
                   </p>
                   <p>JSONL snippet:</p>
                   <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
-{`{"transaction_id": "txn_1001", "amount": 125.5, "is_fraud": 0}`}
+                    {`{"transaction_id": "txn_1001", "amount": 125.5, "is_fraud": 0}`}
                   </pre>
                   <p>
                     Millions of transactions highlight rare fraudulent patterns
@@ -331,7 +368,7 @@ export function FineTuningDemo() {
                   </p>
                   <p>JSONL snippet:</p>
                   <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
-{`{"timestamp": "2025-07-01T00:00:00Z", "demand_MW": 1500}`}
+                    {`{"timestamp": "2025-07-01T00:00:00Z", "demand_MW": 1500}`}
                   </pre>
                   <p>
                     Several years of hourly readings let forecasting models
@@ -345,7 +382,9 @@ export function FineTuningDemo() {
           <TabsContent value="params" className="space-y-6">
             <Card className="bg-black/20 border-purple-500/20">
               <CardHeader>
-                <CardTitle className="text-white">Training Parameters</CardTitle>
+                <CardTitle className="text-white">
+                  Training Parameters
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -357,7 +396,9 @@ export function FineTuningDemo() {
                   </TableHeader>
                   <TableBody>
                     <TableRow>
-                      <TableCell><code>learning_rate</code></TableCell>
+                      <TableCell>
+                        <code>learning_rate</code>
+                      </TableCell>
                       <TableCell>
                         Controls how quickly weights are updated. Lower rates
                         lead to steady training while very high rates may cause
@@ -365,7 +406,9 @@ export function FineTuningDemo() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>num_train_epochs</code></TableCell>
+                      <TableCell>
+                        <code>num_train_epochs</code>
+                      </TableCell>
                       <TableCell>
                         Number of full passes over the dataset. More epochs can
                         refine quality but too many may overfit and hurt
@@ -373,14 +416,18 @@ export function FineTuningDemo() {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>training_steps</code></TableCell>
+                      <TableCell>
+                        <code>training_steps</code>
+                      </TableCell>
                       <TableCell>
                         Total optimization steps to run. Higher values yield
                         better results at the cost of longer training time.
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>quantization</code></TableCell>
+                      <TableCell>
+                        <code>quantization</code>
+                      </TableCell>
                       <TableCell>
                         Precision of the stored weights. Int8 balances size and
                         accuracy, whereas int4 is even smaller but less precise.
@@ -435,11 +482,13 @@ export function FineTuningDemo() {
       <div className="fixed bottom-4 right-4 w-80 z-50 space-y-2">
         <Card className="bg-black/80 border-purple-500/50 flex flex-col max-h-96">
           <CardHeader className="py-2">
-            <CardTitle className="text-white text-sm">Fine-tuning Assistant</CardTitle>
+            <CardTitle className="text-white text-sm">
+              Fine-tuning Assistant
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 overflow-auto space-y-2">
             {assistantMessages.map((m) => (
-              <ChatMessage key={m.id} message={m} />
+              <ChatMessageComp key={m.id} message={m} />
             ))}
           </CardContent>
           <div className="p-2 border-t border-border flex gap-2 bg-black/50">
@@ -449,7 +498,11 @@ export function FineTuningDemo() {
               placeholder="Ask for help..."
               className="flex-1 bg-card border border-border"
             />
-            <Button onClick={handleAssistantSend} disabled={!assistantInput.trim()} className="bg-primary hover:bg-primary/80">
+            <Button
+              onClick={handleAssistantSend}
+              disabled={!assistantInput.trim()}
+              className="bg-primary hover:bg-primary/80"
+            >
               <Send className="w-4 h-4" />
             </Button>
           </div>
