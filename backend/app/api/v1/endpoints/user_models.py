@@ -34,3 +34,11 @@ async def import_model(model_id: PyObjectId, tuning_service: TuningService = Dep
     create = TuningCreate(dataset_id=model.dataset_id or "", parameters=model.parameters or {})
     return await tuning_service.create_task(create)
 
+
+@router.delete("/{model_id}")
+async def delete_model(model_id: PyObjectId, service: ModelService = Depends(get_model_service)):
+    deleted = await service.delete_model(ObjectId(model_id))
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return {"status": "ok"}
+
