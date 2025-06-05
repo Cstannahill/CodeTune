@@ -216,10 +216,105 @@ export function FineTuningDemo() {
                 <CardTitle className="text-white">Dataset Guidelines</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 text-sm text-gray-300">
-                <p>Datasets should be provided in JSONL format with an <code>input</code> and <code>output</code> for each example.</p>
+                <p>
+                  Datasets should be provided in JSONL format with an{' '}
+                  <code>input</code> and <code>output</code> for each example.
+                </p>
                 <p>Example:</p>
                 <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">{`{"input": "Question", "output": "Answer"}`}</pre>
                 <p>Include varied samples that reflect the tasks you want the model to learn.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-black/20 border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-white">Dataset Examples</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6 text-sm text-gray-300">
+                <div className="space-y-2">
+                  <p className="text-white font-semibold">
+                    Image Classification: Distinguishing Pneumonia from Chest X-rays
+                  </p>
+                  <p>JSONL snippet:</p>
+                  <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
+{`{"image_path": "patient001_xray.png", "diagnosis": "pneumonia"}`}
+                  </pre>
+                  <p>
+                    About 5k–10k labeled images help a CNN learn visual patterns
+                    of pneumonia and generalize across patients.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-white font-semibold">
+                    Sentiment Analysis: Analyzing Product Reviews
+                  </p>
+                  <p>JSONL snippet:</p>
+                  <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
+{`{"review_id": "rev001", "review_text": "Great value!", "sentiment": "positive"}`}
+                  </pre>
+                  <p>
+                    Tens of thousands of reviews teach a language model to map
+                    phrases to positive, negative, or neutral sentiment.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-white font-semibold">
+                    Machine Translation: Translating Legal Documents
+                  </p>
+                  <p>JSONL snippet:</p>
+                  <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
+{`{"source_text": "This agreement...", "target_text": "Le présent contrat..."}`}
+                  </pre>
+                  <p>
+                    Hundreds of thousands of parallel sentences capture legal
+                    terminology so a transformer model produces accurate
+                    translations.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-white font-semibold">
+                    Object Detection: Identifying Defects in Manufacturing
+                  </p>
+                  <p>JSONL snippet:</p>
+                  <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
+{`{"image_id": "partA_img001.jpg", "defects": [{"label": "scratch", "bbox": [150,300,50,120]}]}`}
+                  </pre>
+                  <p>
+                    Thousands of annotated images let detection models locate and
+                    classify scratches, dents, or cracks.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-white font-semibold">
+                    Tabular Data for Fraud Detection
+                  </p>
+                  <p>JSONL snippet:</p>
+                  <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
+{`{"transaction_id": "txn_1001", "amount": 125.5, "is_fraud": 0}`}
+                  </pre>
+                  <p>
+                    Millions of transactions highlight rare fraudulent patterns
+                    so tree-based or neural models can flag suspicious activity.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-white font-semibold">
+                    Time Series Forecasting: Predicting Electricity Demand
+                  </p>
+                  <p>JSONL snippet:</p>
+                  <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">
+{`{"timestamp": "2025-07-01T00:00:00Z", "demand_MW": 1500}`}
+                  </pre>
+                  <p>
+                    Several years of hourly readings let forecasting models
+                    capture seasonality, trends, and the impact of weather.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
