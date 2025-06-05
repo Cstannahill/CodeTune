@@ -67,8 +67,8 @@ interface TrainingJobsProps {
     modelId: string,
     datasetId: string,
     config: TrainingConfig
-  ) => void;
-  onStopTraining: (jobId: string) => void;
+  ) => Promise<void>;
+  onStopTraining: (jobId: string) => Promise<void>;
 }
 
 interface TrainingConfig {
@@ -134,26 +134,32 @@ export function TrainingJobs({
     }
   };
 
-  const handleStartTraining = () => {
+  const handleStartTraining = async () => {
     if (selectedModel && selectedDataset) {
       const configWithParent = {
         ...config,
         parentModelId: modelType === "saved" ? selectedModel : undefined,
       };
-      onStartTraining(selectedModel, selectedDataset, configWithParent);
-      setIsCreateDialogOpen(false);
-      setSelectedModel("");
-      setSelectedDataset("");
-      setModelType("huggingface");
-      setConfig({
-        epochs: 3,
-        learningRate: 0.00005,
-        batchSize: 8,
-        warmupSteps: 100,
-        saveModel: true,
-        modelName: "",
-        modelDescription: "",
-      });
+
+      try {
+        await onStartTraining(selectedModel, selectedDataset, configWithParent);
+        setIsCreateDialogOpen(false);
+        setSelectedModel("");
+        setSelectedDataset("");
+        setModelType("huggingface");
+        setConfig({
+          epochs: 3,
+          learningRate: 0.00005,
+          batchSize: 8,
+          warmupSteps: 100,
+          saveModel: true,
+          modelName: "",
+          modelDescription: "",
+        });
+      } catch (error) {
+        console.error("Failed to start training:", error);
+        // TODO: Show error message to user
+      }
     }
   };
 

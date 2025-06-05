@@ -7,7 +7,13 @@ import { DatasetManager, type Dataset } from "./DatasetManager";
 import { TrainingJobs, type FineTuningJob } from "./TrainingJobs";
 import { AnalyticsDashboard } from "./AnalyticsDashboard";
 import { SavedModelsManager, type SavedModel } from "./SavedModelsManager";
-import { fetchSavedModels } from "@/services/api";
+import {
+  fetchSavedModels,
+  startTuning,
+  getTuningProgress,
+  type TuningRequest,
+  type TuningJob,
+} from "@/services/api";
 
 interface DashboardProps {
   onNavigateToFineTuning?: () => void;
@@ -191,78 +197,128 @@ export function Dashboard({ onNavigateToFineTuning }: DashboardProps) {
   };
 
   // Training job management functions
-  const handleStartTraining = (
+  const handleStartTraining = async (
     modelId: string,
     datasetId: string,
     config: {
       epochs?: number;
       learningRate?: number;
+      batchSize?: number;
+      warmupSteps?: number;
       saveModel?: boolean;
       modelName?: string;
+      modelDescription?: string;
+      parentModelId?: string;
     }
-  ): void => {
-    console.log("Starting training:", { modelId, datasetId, config });
-    const newJob: FineTuningJob = {
-      id: `job_${Date.now()}`,
-      modelId,
-      datasetId,
-      status: "pending",
-      progress: 0,
-      createdAt: new Date().toISOString().split("T")[0],
-      epochs: config.epochs || 3,
-      learningRate: config.learningRate || 0.00005,
-    };
-    setTrainingJobs((prev) => [...prev, newJob]);
+  ): Promise<void> => {
+    try {
+      console.log("Starting training:", { modelId, datasetId, config });
 
-    // Simulate training progress
-    setTimeout(() => {
-      setTrainingJobs((prev) =>
-        prev.map((job) =>
-          job.id === newJob.id ? { ...job, status: "running" as const } : job
-        )
-      );
+      // Prepare the tuning request
+      const tuningRequest: TuningRequest = {
+        base_model_id: modelId,
+        dataset_id: datasetId,
+        parameters: {
+          epochs: config.epochs || 3,
+          learning_rate: config.learningRate || 0.00005,
+          batch_size: config.batchSize || 8,
+          warmup_steps: config.warmupSteps || 100,
+        },
+        save_model: config.saveModel || false,
+        model_name: config.modelName,
+        model_description: config.modelDescription,
+        parent_model_id: config.parentModelId,
+      };
 
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 15;
-        if (progress >= 100) {
-          clearInterval(interval);
-          setTrainingJobs((prev) =>
-            prev.map((job) =>
-              job.id === newJob.id
-                ? {
-                    ...job,
-                    status: "completed" as const,
-                    progress: 100,
-                    completedAt: new Date().toISOString().split("T")[0],
-                    metrics: {
-                      loss: Math.random() * 0.5,
-                      accuracy: 0.8 + Math.random() * 0.2,
-                      perplexity: 1 + Math.random() * 0.5,
-                    },
-                  }
-                : job
-            )
-          );
-        } else {
-          setTrainingJobs((prev) =>
-            prev.map((job) =>
-              job.id === newJob.id
-                ? { ...job, progress: Math.min(progress, 100) }
-                : job
-            )
-          );
-        }
-      }, 500);
-    }, 1000);
+      // Start the tuning job via API
+      const tuningJob = await startTuning(tuningRequest);
+
+      // Convert API job to UI job format
+      const newJob: FineTuningJob = {
+        id: tuningJob.id,
+        modelId: tuningJob.base_model_id,
+        datasetId: tuningJob.dataset_id,
+        status: tuningJob.status as FineTuningJob["status"],
+        progress: tuningJob.progress,
+        createdAt: new Date(tuningJob.created_at).toISOString().split("T")[0],
+        epochs: tuningJob.parameters.epochs || 3,
+        learningRate: tuningJob.parameters.learning_rate || 0.00005,
+      };
+
+      setTrainingJobs((prev) => [...prev, newJob]);
+
+      // Start polling for progress updates
+      pollTrainingProgress(tuningJob.id);
+    } catch (error) {
+      console.error("Failed to start training:", error);
+      // Could add error state handling here
+    }
   };
 
-  const handleStopTraining = (jobId: string): void => {
-    setTrainingJobs((prev) =>
-      prev.map((job) =>
-        job.id === jobId ? { ...job, status: "failed" as const } : job
-      )
-    );
+  // Poll training progress from backend
+  const pollTrainingProgress = async (jobId: string): Promise<void> => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const progress = await getTuningProgress(jobId);
+
+        setTrainingJobs((prev) =>
+          prev.map((job) =>
+            job.id === jobId
+              ? {
+                  ...job,
+                  status: progress.status as FineTuningJob["status"],
+                  progress: progress.progress,
+                  completedAt:
+                    progress.status === "completed"
+                      ? new Date().toISOString().split("T")[0]
+                      : undefined,
+                  metrics: progress.result
+                    ? {
+                        loss: progress.result.loss || 0,
+                        accuracy: progress.result.accuracy || 0,
+                        perplexity: progress.result.perplexity || 0,
+                      }
+                    : undefined,
+                }
+              : job
+          )
+        );
+
+        // If training is complete or failed, stop polling
+        if (progress.status === "completed" || progress.status === "failed") {
+          clearInterval(pollInterval);
+
+          // If a model was saved, refresh the saved models list
+          if (progress.status === "completed" && progress.saved_model_id) {
+            try {
+              const updatedModels = await fetchSavedModels();
+              setSavedModels(updatedModels);
+            } catch (error) {
+              console.error("Failed to refresh saved models:", error);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to get training progress:", error);
+        clearInterval(pollInterval);
+      }
+    }, 2000); // Poll every 2 seconds
+  };
+
+  const handleStopTraining = async (jobId: string): Promise<void> => {
+    try {
+      // TODO: Implement stop training API endpoint in backend
+      // await stopTuning(jobId);
+
+      // For now, just update the UI state
+      setTrainingJobs((prev) =>
+        prev.map((job) =>
+          job.id === jobId ? { ...job, status: "failed" as const } : job
+        )
+      );
+    } catch (error) {
+      console.error("Failed to stop training:", error);
+    }
   };
 
   // Saved models management functions
