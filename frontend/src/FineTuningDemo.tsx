@@ -17,6 +17,8 @@ import {
 import type { SimpleMessage } from "@/components/chat/ChatMessage";
 import { testFineTunedDM, type FineTuningRequest } from "@/services/api-mock";
 import { ChatMessage } from "@/components/chat/ChatMessage";
+import { FineTuningPresetSelector } from "@/components/aicomponent/FineTuningPresetSelector";
+import { type FineTuningPreset } from "@/presets";
 
 export function FineTuningDemo() {
   const [personality] = useState("classic");
@@ -39,6 +41,7 @@ export function FineTuningDemo() {
   const [assistantMessages, setAssistantMessages] = useState<SimpleMessage[]>([]);
   const [assistantInput, setAssistantInput] = useState("");
   const [training, setTraining] = useState(false);
+  const [preset, setPreset] = useState<FineTuningPreset | null>(null);
 
 
   const buildRequest = (): FineTuningRequest => ({
@@ -68,6 +71,14 @@ export function FineTuningDemo() {
     if (e.target.files && e.target.files[0]) {
       setDatasetFile(e.target.files[0]);
     }
+  };
+
+  const applyPreset = (p: FineTuningPreset) => {
+    setPreset(p);
+    setEpochs(p.epochs);
+    setTrainingSteps(p.trainingSteps);
+    setLearningRate(p.learningRate);
+    setQuantization(p.quantization);
   };
 
   const startTraining = async () => {
@@ -133,6 +144,10 @@ export function FineTuningDemo() {
                     <p className="text-xs text-gray-400">{datasetFile.name}</p>
                   )}
                 </div>
+                <FineTuningPresetSelector value={preset?.id ?? null} onValueChange={applyPreset} />
+                {preset && (
+                  <p className="text-xs text-gray-400">{preset.description}</p>
+                )}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-muted-foreground mb-1">Training Epochs</label>
                   <Input
