@@ -1,30 +1,33 @@
 import { useState } from "react";
-import { Brain, Save, Send } from "lucide-react";
+import { Brain, Send } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { AIPersonalitySelector } from "@/components/aicomponent/AIPersonalitySelector";
-import { PromptEditor } from "@/components/aicomponent/PromptEditor";
-import { AIModelSelector } from "@/components/aicomponent/AIModelSelector";
-import { ChatMessage } from "@/components/chat/ChatMessage";
+import {
+  Table,
+  TableBody,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import type { SimpleMessage } from "@/components/chat/ChatMessage";
-import { createFineTunedDM, testFineTunedDM, type FineTuningRequest } from "@/services/api-mock";
+import { testFineTunedDM, type FineTuningRequest } from "@/services/api-mock";
+import { ChatMessage } from "@/components/chat/ChatMessage";
 
 export function FineTuningDemo() {
-  const [personality, setPersonality] = useState("classic");
-  const [prompt, setPrompt] = useState("You are a helpful dungeon master.");
-  const [keywords, setKeywords] = useState("");
-  const [model, setModel] = useState("gpt-4");
-  const [temperature, setTemperature] = useState(0.7);
-  const [maxTokens, setMaxTokens] = useState(300);
-  const [trainingData, setTrainingData] = useState("");
+  const [personality] = useState("classic");
+  const [prompt] = useState("You are a helpful dungeon master.");
+  const [keywords] = useState("");
+  const [model] = useState("gpt-4");
+  const [temperature] = useState(0.7);
+  const [maxTokens] = useState(300);
+  const [trainingData] = useState("");
 
-  const [activeTab, setActiveTab] = useState("basic");
+  const [activeTab, setActiveTab] = useState("tuning");
   const [datasetFile, setDatasetFile] = useState<File | null>(null);
   const [epochs, setEpochs] = useState(3);
   const [trainingSteps, setTrainingSteps] = useState(1000);
@@ -37,10 +40,6 @@ export function FineTuningDemo() {
   const [assistantInput, setAssistantInput] = useState("");
   const [training, setTraining] = useState(false);
 
-  const [saving, setSaving] = useState(false);
-  const [currentMessage, setCurrentMessage] = useState("");
-  const [messages, setMessages] = useState<SimpleMessage[]>([]);
-  const [sharePublicly, setSharePublicly] = useState(false);
 
   const buildRequest = (): FineTuningRequest => ({
     campaignStyle: personality,
@@ -61,39 +60,9 @@ export function FineTuningDemo() {
     trainingSteps,
     learningRate,
     quantization,
-    sharePublicly,
+    sharePublicly: false,
   });
 
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await createFineTunedDM(buildRequest());
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSendTest = async () => {
-    if (!currentMessage.trim()) return;
-    const userMsg: SimpleMessage = {
-      id: Date.now().toString(),
-      type: "player",
-      sender: "You",
-      content: currentMessage,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setCurrentMessage("");
-    const res = await testFineTunedDM(buildRequest(), userMsg.content);
-    const aiMsg: SimpleMessage = {
-      id: Date.now().toString() + "_ai",
-      type: "dm",
-      sender: "AI DM",
-      content: res.response,
-      timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, aiMsg]);
-  };
 
   const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -145,126 +114,13 @@ export function FineTuningDemo() {
         </h1>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
-            <TabsTrigger value="basic">Basic</TabsTrigger>
-            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+            <TabsTrigger value="tuning">Fine-Tuning</TabsTrigger>
+            <TabsTrigger value="datasets">Dataset Details</TabsTrigger>
+            <TabsTrigger value="params">Training Parameters</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="basic" className="space-y-6">
-            <Card className="bg-black/20 border-purple-500/20">
-              <CardHeader>
-                <CardTitle className="text-white">Base Model & Settings</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <AIModelSelector value={model} onValueChange={setModel} />
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">Temperature</label>
-                  <Input
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="0.1"
-                    value={temperature}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setTemperature(parseFloat(e.target.value))}
-                    className="w-full"
-                  />
-                  <p className="text-xs text-gray-400">Lower values =&gt; consistent. Higher =&gt; creative.</p>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">Max Tokens</label>
-                  <Input
-                    type="number"
-                    min="50"
-                    max="2000"
-                    value={maxTokens}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setMaxTokens(parseInt(e.target.value))}
-                    className="w-24 bg-card border border-border text-primary"
-                  />
-                  <p className="text-xs text-gray-400">Controls response length.</p>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card className="bg-black/20 border-purple-500/20">
-              <CardHeader>
-                <CardTitle className="text-white">Personality & Prompt</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <AIPersonalitySelector value={personality} onChange={setPersonality} />
-                <PromptEditor value={prompt} onChange={setPrompt} />
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Keywords</label>
-                  <Input
-                    value={keywords}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setKeywords(e.target.value)}
-                    placeholder="dark, mysterious, undead..."
-                    className="bg-card border border-border text-primary"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-muted-foreground mb-1">Training Examples</label>
-                  <Textarea
-                    value={trainingData}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                      setTrainingData(e.target.value)}
-                    placeholder="Example conversations or descriptions"
-                    className="min-h-[100px] bg-card border border-border text-primary"
-                  />
-                  <p className="text-xs text-gray-400">
-                    Provide short samples that capture your world&apos;s tone.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <input
-                    id="sharePublicly"
-                    type="checkbox"
-                    checked={sharePublicly}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setSharePublicly(e.target.checked)}
-                    className="size-4 accent-purple-600"
-                  />
-                  <label htmlFor="sharePublicly" className="text-sm text-muted-foreground">
-                    Share publicly in DM library
-                  </label>
-                </div>
-                <Button onClick={handleSave} disabled={saving} className="mt-4 bg-primary hover:bg-primary/80">
-                  <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : "Save"}
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-black/20 border-purple-500/20">
-              <CardHeader>
-                <CardTitle className="text-white">Preview Chat</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ScrollArea className="h-64 border border-border rounded-md p-2 bg-black/30">
-                  <div className="space-y-4">
-                    {messages.map((m) => (
-                      <ChatMessage key={m.id} message={m} />
-                    ))}
-                  </div>
-                </ScrollArea>
-                <div className="flex gap-2">
-                  <Input
-                    value={currentMessage}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setCurrentMessage(e.target.value)}
-                    placeholder="Ask your DM..."
-                    className="flex-1 bg-card border border-border"
-                  />
-                  <Button onClick={handleSendTest} disabled={!currentMessage.trim()} className="bg-primary hover:bg-primary/80">
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-400">Send a message to see how the AI responds with current settings.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="advanced" className="space-y-6">
+          <TabsContent value="tuning" className="space-y-6">
             <Card className="bg-black/20 border-purple-500/20">
               <CardHeader>
                 <CardTitle className="text-white">Training Configuration</CardTitle>
@@ -350,6 +206,56 @@ export function FineTuningDemo() {
                     {analysis} {qualityLoss !== null && `(Quality loss: ${qualityLoss}%)`}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="datasets" className="space-y-6">
+            <Card className="bg-black/20 border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-white">Dataset Guidelines</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm text-gray-300">
+                <p>Datasets should be provided in JSONL format with an <code>input</code> and <code>output</code> for each example.</p>
+                <p>Example:</p>
+                <pre className="bg-black/50 p-2 rounded-md whitespace-pre-wrap">{`{"input": "Question", "output": "Answer"}`}</pre>
+                <p>Include varied samples that reflect the tasks you want the model to learn.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="params" className="space-y-6">
+            <Card className="bg-black/20 border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-white">Training Parameters</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Parameter</TableHead>
+                      <TableHead>Description</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell><code>learning_rate</code></TableCell>
+                      <TableCell>Step size for weight updates. Lower values train more steadily.</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell><code>batch_size</code></TableCell>
+                      <TableCell>Number of samples processed before the model updates.</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell><code>num_train_epochs</code></TableCell>
+                      <TableCell>How many times the dataset is iterated during training.</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell><code>warmup_steps</code></TableCell>
+                      <TableCell>Number of steps to gradually ramp up the learning rate.</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
