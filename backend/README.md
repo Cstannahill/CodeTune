@@ -12,11 +12,13 @@ This backend is built with [FastAPI](https://fastapi.tiangolo.com/) and uses Mon
 
 ## Development
 
-Create a `.env` file or set the following environment variables:
+Create a `.env` file (see `.env.example`) or set the following environment variables:
 
 ```
-MONGODB_URI=mongodb://localhost:27017
+MONGODB_URI=mongodb+srv://cstannahill10:<db_password>@c0.ti97tni.mongodb.net/?retryWrites=true&w=majority&appName=c0
 MONGODB_DB=codetune
+OPENAI_API_KEY=<your_openai_api_key>
+HUGGINGFACE_TOKEN=<your_huggingface_token>
 ```
 
 Install dependencies and start the server:
