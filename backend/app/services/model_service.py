@@ -22,3 +22,7 @@ class ModelService:
     async def get_model(self, model_id: ObjectId) -> SavedModel | None:
         doc = await self.collection.find_one({"_id": model_id})
         return SavedModel(**doc) if doc else None
+
+    async def delete_model(self, model_id: ObjectId) -> bool:
+        res = await self.collection.delete_one({"_id": model_id})
+        return res.deleted_count == 1

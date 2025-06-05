@@ -74,6 +74,13 @@ export async function importModel(modelId: string) {
   return res.json();
 }
 
+export async function deleteModel(modelId: string): Promise<void> {
+  const res = await fetch(`${API_URL}/api/v1/user-models/${modelId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Delete failed');
+}
+
 // Tuning endpoints
 export async function createTuning(payload: {
   dataset_id: string;

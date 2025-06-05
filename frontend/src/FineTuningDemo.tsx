@@ -39,12 +39,14 @@ import {
   type ChatMessage,
   fetchSavedModels,
   saveModel,
+  deleteModel,
   type SavedModel,
   createTuning,
   getTuningProgress,
 } from "@/services/api";
 import { ChatMessage as ChatMessageComponent } from "@/components/chat/ChatMessage";
 import { FineTuningPresetSelector } from "@/components/aicomponent/FineTuningPresetSelector";
+import { SavedModelList } from "@/components/aicomponent/SavedModelList";
 import { type FineTuningPreset } from "@/presets";
 
 export function FineTuningDemo() {
@@ -164,6 +166,12 @@ export function FineTuningDemo() {
     }
   };
 
+  const handleDeleteModel = async (id: string) => {
+    await deleteModel(id);
+    setSavedModels((prev) => prev.filter((m) => m.id !== id));
+    if (selectedModelId === id) setSelectedModelId(null);
+  };
+
   const handleAssistantSend = async () => {
     if (!assistantInput.trim()) return;
     const userMsg: SimpleMessage = {
@@ -198,10 +206,11 @@ export function FineTuningDemo() {
         </h1>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList>
-            <TabsTrigger value="tuning">Fine-Tuning</TabsTrigger>
-            <TabsTrigger value="datasets">Dataset Details</TabsTrigger>
-            <TabsTrigger value="params">Training Parameters</TabsTrigger>
-            <TabsTrigger value="results">Results</TabsTrigger>
+          <TabsTrigger value="tuning">Fine-Tuning</TabsTrigger>
+          <TabsTrigger value="datasets">Dataset Details</TabsTrigger>
+          <TabsTrigger value="params">Training Parameters</TabsTrigger>
+          <TabsTrigger value="results">Results</TabsTrigger>
+          <TabsTrigger value="models">Model Management</TabsTrigger>
           </TabsList>
 
 
@@ -517,6 +526,21 @@ export function FineTuningDemo() {
                   <p className="text-sm text-gray-300">
                     Final loss: {qualityLoss}
                   </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="models" className="space-y-6">
+            <Card className="bg-black/20 border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="text-white">Saved Models</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {savedModels.length > 0 ? (
+                  <SavedModelList models={savedModels} onDelete={handleDeleteModel} />
+                ) : (
+                  <p className="text-gray-300">No saved models.</p>
                 )}
               </CardContent>
             </Card>
