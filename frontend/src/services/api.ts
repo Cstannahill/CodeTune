@@ -20,3 +20,39 @@ export async function assistantChat(messages: ChatMessage[]): Promise<string> {
   const data = await res.json();
   return data.response as string;
 }
+
+export interface SavedModel {
+  id: string;
+  name: string;
+  parameters: Record<string, unknown> | null;
+  result: Record<string, unknown> | null;
+}
+
+export async function fetchSavedModels(): Promise<SavedModel[]> {
+  const res = await fetch(`${API_URL}/api/v1/user-models/`);
+  if (!res.ok) throw new Error('Failed to load saved models');
+  return res.json();
+}
+
+export async function saveModel(payload: {
+  name: string;
+  dataset_id?: string;
+  parameters?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+}): Promise<SavedModel> {
+  const res = await fetch(`${API_URL}/api/v1/user-models/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error('Save model failed');
+  return res.json();
+}
+
+export async function importModel(modelId: string) {
+  const res = await fetch(`${API_URL}/api/v1/user-models/import/${modelId}`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Import failed');
+  return res.json();
+}

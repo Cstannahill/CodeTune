@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -34,7 +34,13 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import type { SimpleMessage } from "@/components/chat/ChatMessage";
-import { assistantChat, type ChatMessage } from "@/services/api";
+import {
+  assistantChat,
+  type ChatMessage,
+  fetchSavedModels,
+  saveModel,
+  type SavedModel,
+} from "@/services/api";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { FineTuningPresetSelector } from "@/components/aicomponent/FineTuningPresetSelector";
 import { type FineTuningPreset } from "@/presets";
@@ -55,6 +61,14 @@ export function FineTuningDemo() {
   const [training, setTraining] = useState(false);
   const [preset, setPreset] = useState<FineTuningPreset | null>(null);
   const [trainingHistory, setTrainingHistory] = useState<number[]>([]);
+  const [savedModels, setSavedModels] = useState<SavedModel[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchSavedModels()
+      .then(setSavedModels)
+      .catch(() => setSavedModels([]));
+  }, []);
 
 
 
@@ -89,6 +103,35 @@ export function FineTuningDemo() {
     setTraining(false);
     setAnalysis("Training complete");
     setQualityLoss(losses[losses.length - 1]);
+  };
+
+  const handleSaveModel = async () => {
+    const payload = {
+      name: `model-${Date.now()}`,
+      dataset_id: datasetFile?.name,
+      parameters: { epochs, trainingSteps, learningRate, quantization },
+      result: { loss: qualityLoss },
+    };
+    const saved = await saveModel(payload);
+    setSavedModels((prev) => [saved, ...prev]);
+  };
+
+  const handleImportModel = (id: string) => {
+    setSelectedModelId(id);
+    const model = savedModels.find((m) => m.id === id);
+    if (model && model.parameters) {
+      const p = model.parameters as {
+        epochs?: number;
+        trainingSteps?: number;
+        learningRate?: number;
+        quantization?: string;
+      };
+      if (p.epochs !== undefined) setEpochs(p.epochs);
+      if (p.trainingSteps !== undefined) setTrainingSteps(p.trainingSteps);
+      if (p.learningRate !== undefined) setLearningRate(p.learningRate);
+      if (p.quantization !== undefined)
+        setQuantization(p.quantization as 'none' | 'int8' | 'int4');
+    }
   };
 
   const handleAssistantSend = async () => {
@@ -145,6 +188,21 @@ export function FineTuningDemo() {
                     <p className="text-xs text-gray-400">{datasetFile.name}</p>
                   )}
                 </div>
+                {savedModels.length > 0 && (
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-muted-foreground">Import Saved Model</label>
+                    <Select value={selectedModelId ?? ""} onValueChange={handleImportModel}>
+                      <SelectTrigger className="w-56 bg-card border border-border">
+                        <SelectValue placeholder="Select model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {savedModels.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <FineTuningPresetSelector value={preset?.id ?? null} onValueChange={applyPreset} />
                 {preset && (
                   <p className="text-xs text-gray-400">{preset.description}</p>
@@ -219,6 +277,11 @@ export function FineTuningDemo() {
                   <Brain className="w-4 h-4 mr-2" />
                   {training ? "Training..." : "Start Training"}
                 </Button>
+                {!training && analysis && (
+                  <Button onClick={handleSaveModel} className="ml-2 bg-secondary hover:bg-secondary/80">
+                    Save Model
+                  </Button>
+                )}
                 {training && (
                   <div className="mt-2">
                     <Progress value={trainingProgress} />
