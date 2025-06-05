@@ -159,7 +159,9 @@ export function FineTuningDemo() {
                     className="w-24 bg-card border border-border text-primary"
                   />
                   <p className="text-xs text-gray-400">
-                    More epochs can improve quality but may overfit.
+                    More epochs can improve quality but may overfit. Overfitting
+                    happens when the model memorizes the training set and
+                    performs poorly on new prompts.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -173,7 +175,9 @@ export function FineTuningDemo() {
                     className="w-24 bg-card border border-border text-primary"
                   />
                   <p className="text-xs text-gray-400">
-                    Higher values take longer but yield better results.
+                    Higher values take longer but usually yield better results.
+                    Too few steps might underfit the data and miss important
+                    patterns.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -188,7 +192,8 @@ export function FineTuningDemo() {
                     className="w-24 bg-card border border-border text-primary"
                   />
                   <p className="text-xs text-gray-400">
-                    Lower values train steadily; high values risk divergence.
+                    Lower values train steadily; high values risk divergence,
+                    where the loss increases and training becomes unstable.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -204,7 +209,9 @@ export function FineTuningDemo() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-400">
-                    Reduces model size and speeds inference but may lower quality.
+                    Reduces model size and speeds inference but may lower
+                    quality. Int8 preserves more accuracy than Int4, which is
+                    smaller but less precise.
                   </p>
                 </div>
                 <Button onClick={startTraining} disabled={training || !datasetFile} className="bg-primary hover:bg-primary/80">
@@ -350,19 +357,33 @@ export function FineTuningDemo() {
                   <TableBody>
                     <TableRow>
                       <TableCell><code>learning_rate</code></TableCell>
-                      <TableCell>Step size for weight updates. Lower values train more steadily.</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell><code>batch_size</code></TableCell>
-                      <TableCell>Number of samples processed before the model updates.</TableCell>
+                      <TableCell>
+                        Controls how quickly weights are updated. Lower rates
+                        lead to steady training while very high rates may cause
+                        divergence.
+                      </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell><code>num_train_epochs</code></TableCell>
-                      <TableCell>How many times the dataset is iterated during training.</TableCell>
+                      <TableCell>
+                        Number of full passes over the dataset. More epochs can
+                        refine quality but too many may overfit and hurt
+                        generalization.
+                      </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell><code>warmup_steps</code></TableCell>
-                      <TableCell>Number of steps to gradually ramp up the learning rate.</TableCell>
+                      <TableCell><code>training_steps</code></TableCell>
+                      <TableCell>
+                        Total optimization steps to run. Higher values yield
+                        better results at the cost of longer training time.
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell><code>quantization</code></TableCell>
+                      <TableCell>
+                        Precision of the stored weights. Int8 balances size and
+                        accuracy, whereas int4 is even smaller but less precise.
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
