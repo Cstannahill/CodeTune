@@ -1,5 +1,5 @@
-import { FineTuningDemo } from "./FineTuningDemo";
+import Dashboard from "./Dashboard";
 
 export default function App() {
-  return <FineTuningDemo />;
+  return <Dashboard />;
 }

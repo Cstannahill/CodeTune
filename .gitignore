@@ -1,0 +1,70 @@
+# Node/React/Vite
+node_modules/
+dist/
+build/
+.vite/
+*.log
+*.tsbuildinfo
+.env
+.env.*
+.cache/
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.sqlite3
+*.db
+*.db-journal
+*.log
+*.pot
+*.mo
+*.pyc
+*.pyo
+*.pyd
+*.mypy_cache/
+*.pytest_cache/
+*.coverage
+.coverage.*
+htmlcov/
+
+# VSCode/IDE
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Misc
+settings.json
+*.bak
+*.swp
+*.tmp
+
+# Ignore lock files if not needed
+yarn.lock
+package-lock.json
+
+# Ignore test output
+junit.xml
+
+# Ignore local data
+local_data/
+
+# Ignore backend/venv
+backend/venv/
+
+# Ignore frontend/.next (if Next.js is ever used)
+frontend/.next/

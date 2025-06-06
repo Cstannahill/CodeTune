@@ -2,6 +2,9 @@ fastapi
 uvicorn[standard]
 motor
 pydantic
+pydantic-settings
 openai
 huggingface_hub
+sqlalchemy
 ollama
+rich

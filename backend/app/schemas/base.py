@@ -2,16 +2,19 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 from bson import ObjectId
 
+
 class PyObjectId(ObjectId):
     @classmethod
     def __get_validators__(cls):
         yield cls.validate
 
     @classmethod
-    def validate(cls, v):
+    def validate(cls, v, *args, **kwargs):
+        # Accept extra arguments from Pydantic validators (field info, etc.)
         if not ObjectId.is_valid(v):
             raise ValueError("Invalid objectid")
         return ObjectId(v)
+
 
 class DBModelMixin(BaseModel):
     id: PyObjectId | None = Field(alias="_id", default=None)
