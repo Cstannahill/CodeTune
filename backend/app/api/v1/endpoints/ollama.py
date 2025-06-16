@@ -33,3 +33,15 @@ class PullRequest(BaseModel):
 async def pull(req: PullRequest, service: OllamaService = Depends(get_service)):
     await service.pull_model(req.model)
     return {"status": "ok"}
+
+
+class CreateRequest(BaseModel):
+    name: str
+    modelfile: str
+    gguf_path: str | None = None
+
+
+@router.post("/create")
+async def create(req: CreateRequest, service: OllamaService = Depends(get_service)):
+    await service.create_model(req.name, req.modelfile, req.gguf_path)
+    return {"status": "ok"}

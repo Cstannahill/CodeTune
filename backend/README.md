@@ -28,6 +28,21 @@ Load the model into Ollama with:
 ollama create mymodel -f Modelfile
 ```
 
+### Fine-tuning workflow
+
+The typical workflow to fine-tune and serve a model locally is:
+
+1. **Download a base model** from HuggingFace using `POST /api/v1/models/pull`.
+2. **Run a tuning task** with `POST /api/v1/tuning/` providing dataset and
+   training parameters.
+3. After training, convert the resulting checkpoint to **GGUF** and create a
+   minimal `Modelfile` referencing it.
+4. **Create the Ollama model** by calling `POST /api/v1/ollama/create` with the
+   model name and path to the Modelfile (or GGUF file).
+
+Once created, the model can be listed with `/api/v1/ollama/models` and used for
+chat completions via `/api/v1/ollama/chat`.
+
 The API exposes the following new endpoints:
 
 - `GET /api/v1/ollama/models` - list locally available models
