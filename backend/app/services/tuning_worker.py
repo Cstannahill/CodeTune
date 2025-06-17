@@ -16,6 +16,7 @@ from transformers import (
     Trainer,
     TrainingArguments,
     DataCollatorForLanguageModeling,
+    TrainerCallback,
 )
 
 logger = logging.getLogger("tuning_worker")
@@ -37,8 +38,13 @@ class TuningWorker:
         return {}
 
     def train_model(
-        self, model_dir: str, dataset_path: str, output_dir: str, epochs: int
-    ) -> float:
+        self,
+        model_dir: str,
+        dataset_path: str,
+        output_dir: str,
+        epochs: int,
+        progress_cb: callable | None = None,
+    ) -> tuple[float, list[float]]:
         dataset = load_dataset("text", data_files=dataset_path)
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
         model = AutoModelForCausalLM.from_pretrained(model_dir)
@@ -59,12 +65,29 @@ class TuningWorker:
             save_strategy="no",
         )
 
+        loss_history: list[float] = []
+
+        class ProgressCallback(TrainerCallback):
+            def on_epoch_end(self, args, state, control, **kwargs):
+                if progress_cb and state.epoch is not None:
+                    pct = float(state.epoch) / float(epochs)
+                    progress_cb(pct)
+
+            def on_log(self, args, state, control, logs=None, **kwargs):
+                if logs and "loss" in logs:
+                    try:
+                        loss_history.append(float(logs["loss"]))
+                    except Exception:
+                        pass
+
         trainer = Trainer(
             model=model,
             args=args,
             train_dataset=tokenized,
             data_collator=data_collator,
         )
+
+        trainer.add_callback(ProgressCallback())
 
         trainer.train()
         # Try to extract the final training loss from the Trainer state
@@ -77,7 +100,7 @@ class TuningWorker:
         os.makedirs(output_dir, exist_ok=True)
         model.save_pretrained(output_dir)
         tokenizer.save_pretrained(output_dir)
-        return float(loss) if loss is not None else 0.0
+        return float(loss) if loss is not None else 0.0, loss_history
 
     def convert_to_gguf(self, model_dir: str, gguf_path: str, script: str) -> None:
         cmd = ["python", script, model_dir, gguf_path]
@@ -125,10 +148,26 @@ class TuningWorker:
 
             await self.service.update_progress(task_id, 0.2, "training")
             output_dir = os.path.join(local_dir, f"finetuned_{task_id}")
-            loss = self.train_model(model_dir, dataset_path, output_dir, epochs)
+
+            async def async_update(pct: float):
+                await self.service.update_progress(
+                    task_id, 0.2 + pct * 0.4, "training"
+                )
+
+            def progress_cb(p: float):
+                asyncio.get_event_loop().call_soon_threadsafe(
+                    asyncio.create_task, async_update(p)
+                )
+
+            loss, history = self.train_model(
+                model_dir, dataset_path, output_dir, epochs, progress_cb
+            )
 
             await self.service.update_progress(
-                task_id, 0.6, "training_complete", result={"loss": loss}
+                task_id,
+                0.6,
+                "training_complete",
+                result={"loss": loss, "loss_history": history},
             )
 
             repo_id_pushed = None
@@ -144,7 +183,12 @@ class TuningWorker:
             service = OllamaService()
             await service.create_model(name, modelfile, gguf_path)
 
-            result = {"gguf_path": gguf_path, "model": name, "loss": loss}
+            result = {
+                "gguf_path": gguf_path,
+                "model": name,
+                "loss": loss,
+                "loss_history": history,
+            }
             if repo_id_pushed:
                 result["repo_id"] = repo_id_pushed
             await self.service.update_progress(task_id, 1.0, "completed", result=result)
