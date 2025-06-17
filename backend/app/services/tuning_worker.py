@@ -36,7 +36,9 @@ class TuningWorker:
                 return json.load(f)
         return {}
 
-    def train_model(self, model_dir: str, dataset_path: str, output_dir: str, epochs: int) -> None:
+    def train_model(
+        self, model_dir: str, dataset_path: str, output_dir: str, epochs: int
+    ) -> float:
         dataset = load_dataset("text", data_files=dataset_path)
         tokenizer = AutoTokenizer.from_pretrained(model_dir)
         model = AutoModelForCausalLM.from_pretrained(model_dir)
@@ -44,7 +46,9 @@ class TuningWorker:
         def tokenize(batch):
             return tokenizer(batch["text"], truncation=True)
 
-        tokenized = dataset["train"].map(tokenize, batched=True, remove_columns=["text"])
+        tokenized = dataset["train"].map(
+            tokenize, batched=True, remove_columns=["text"]
+        )
 
         data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
         args = TrainingArguments(
@@ -63,9 +67,17 @@ class TuningWorker:
         )
 
         trainer.train()
+        # Try to extract the final training loss from the Trainer state
+        loss = None
+        for entry in reversed(trainer.state.log_history):
+            if "loss" in entry:
+                loss = entry["loss"]
+                break
+
         os.makedirs(output_dir, exist_ok=True)
         model.save_pretrained(output_dir)
         tokenizer.save_pretrained(output_dir)
+        return float(loss) if loss is not None else 0.0
 
     def convert_to_gguf(self, model_dir: str, gguf_path: str, script: str) -> None:
         cmd = ["python", script, model_dir, gguf_path]
@@ -113,10 +125,15 @@ class TuningWorker:
 
             await self.service.update_progress(task_id, 0.2, "training")
             output_dir = os.path.join(local_dir, f"finetuned_{task_id}")
-            self.train_model(model_dir, dataset_path, output_dir, epochs)
+            loss = self.train_model(model_dir, dataset_path, output_dir, epochs)
 
+            await self.service.update_progress(
+                task_id, 0.6, "training_complete", result={"loss": loss}
+            )
+
+            repo_id_pushed = None
             if push:
-                hf.push_model(output_dir, name)
+                repo_id_pushed = hf.push_model(output_dir, name)
 
             await self.service.update_progress(task_id, 0.7, "converting")
             gguf_path = os.path.join(output_dir, "model.gguf")
@@ -127,12 +144,16 @@ class TuningWorker:
             service = OllamaService()
             await service.create_model(name, modelfile, gguf_path)
 
-            result = {"gguf_path": gguf_path, "model": name}
+            result = {"gguf_path": gguf_path, "model": name, "loss": loss}
+            if repo_id_pushed:
+                result["repo_id"] = repo_id_pushed
             await self.service.update_progress(task_id, 1.0, "completed", result=result)
             logger.info(f"Completed tuning for task {task_id}")
         except Exception as e:
             logger.error(f"Tuning failed for task {task_id}: {e}")
-            await self.service.update_progress(task_id, 1.0, "failed", result={"error": str(e)})
+            await self.service.update_progress(
+                task_id, 1.0, "failed", result={"error": str(e)}
+            )
 
 
 # Usage example (to be run in an async context, e.g. FastAPI startup):

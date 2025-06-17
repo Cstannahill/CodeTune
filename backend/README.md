@@ -84,6 +84,10 @@ queued tuning tasks. Each task should contain Hugging Face credentials and a
 fine-tunes it on the provided dataset, converts the result to GGUF and finally
 creates the Ollama model. Progress can be polled via `/api/v1/tuning/{id}/progress`.
 
+### UI workflow
+
+The React frontend guides you through the entire tuning pipeline. Upload a dataset and start a task from the **Fine‑Tuning** tab. Progress updates show an estimated time remaining. When complete, the worker converts the checkpoint to GGUF and loads the model into Ollama. If `push` is enabled it will also push the model to HuggingFace. The final progress response includes the GGUF path and HuggingFace repo which are presented in the UI. Saved models can later be pushed to HuggingFace or loaded into Ollama from the dashboard.
+
 ## Development
 
 Create a `.env` file (see `.env.example`) or set the following environment variables:

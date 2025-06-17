@@ -17,7 +17,7 @@ ChartJS.register(
   PointElement,
   LineElement,
   Tooltip,
-  Legend
+  Legend,
 );
 import { Brain, Send } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -88,7 +88,7 @@ export function FineTuningDemo() {
   const [qualityLoss, setQualityLoss] = useState<number | null>(null);
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [assistantMessages, setAssistantMessages] = useState<SimpleMessage[]>(
-    []
+    [],
   );
   const [assistantLoading, setAssistantLoading] = useState(false);
   const [assistantInput, setAssistantInput] = useState("");
@@ -109,6 +109,9 @@ export function FineTuningDemo() {
   const [editingModelName, setEditingModelName] = useState(false);
   const [modelNameEdit, setModelNameEdit] = useState<string | null>(null);
   const [pushToHf, setPushToHf] = useState(false);
+  const [ollamaModel, setOllamaModel] = useState<string | null>(null);
+  const [ggufPath, setGgufPath] = useState<string | null>(null);
+  const [hfRepoId, setHfRepoId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSavedModels()
@@ -137,8 +140,8 @@ export function FineTuningDemo() {
     };
   }, []);
 
-const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  if (e.target.files && e.target.files[0]) {
+  const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setDatasetFile(file);
       setUploading(true);
@@ -150,8 +153,8 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         })
         .catch(() => toast.error("Upload failed"))
         .finally(() => setUploading(false));
-  }
-};
+    }
+  };
 
   const applyPreset = (p: FineTuningPreset) => {
     setPreset(p);
@@ -167,6 +170,9 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTrainingProgress(0);
     setAnalysis(null);
     setQualityLoss(null);
+    setOllamaModel(null);
+    setGgufPath(null);
+    setHfRepoId(null);
     setTrainingHistory([]);
     setStartTime(Date.now());
     setTimeRemaining(null);
@@ -196,15 +202,26 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           setTimeRemaining(
             remaining > 0
               ? `${Math.floor(remaining / 60)}m ${Math.round(
-                  remaining % 60
+                  remaining % 60,
                 )}s left`
-              : null
+              : null,
           );
         } else if (pct >= 100) {
           setTimeRemaining(null);
         }
-        if (prog.result && "loss" in prog.result) {
-          setQualityLoss(prog.result.loss as number);
+        if (prog.result) {
+          if ("loss" in prog.result) {
+            setQualityLoss(prog.result.loss as number);
+          }
+          if ("gguf_path" in prog.result) {
+            setGgufPath(prog.result.gguf_path as string);
+          }
+          if ("repo_id" in prog.result) {
+            setHfRepoId(prog.result.repo_id as string);
+          }
+          if ("model" in prog.result) {
+            setOllamaModel(prog.result.model as string);
+          }
         }
         setAnalysis(prog.status);
         if (prog.status === "completed" || prog.status === "failed") {
@@ -213,7 +230,7 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           setAnalysis(
             prog.status === "completed"
               ? "Training complete"
-              : "Training failed"
+              : "Training failed",
           );
         }
       } catch {
@@ -239,7 +256,7 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setModelSaved(true);
       if (saved.local_path) {
         toast.success(
-          `Model saved successfully!\nLocation: ${saved.local_path}`
+          `Model saved successfully!\nLocation: ${saved.local_path}`,
         );
       } else {
         toast.success("Model saved successfully, but save path is unknown.");
@@ -283,7 +300,7 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       (m) => ({
         role: m.type === "dm" ? "assistant" : "user",
         content: m.content,
-      })
+      }),
     );
     try {
       const response = await assistantChat(chatHistory);
@@ -323,7 +340,9 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       await updateModelName(savedModels[0]?.id, modelNameEdit.trim());
       setModelName(modelNameEdit.trim());
       setSavedModels((prev) =>
-        prev.map((m, i) => (i === 0 ? { ...m, name: modelNameEdit.trim() } : m))
+        prev.map((m, i) =>
+          i === 0 ? { ...m, name: modelNameEdit.trim() } : m,
+        ),
       );
       toast.success("Model name updated");
       setEditingModelName(false);
@@ -552,7 +571,10 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                     checked={pushToHf}
                     onChange={(e) => setPushToHf(e.target.checked)}
                   />
-                  <label htmlFor="pushhf" className="text-sm text-muted-foreground">
+                  <label
+                    htmlFor="pushhf"
+                    className="text-sm text-muted-foreground"
+                  >
                     Push to HuggingFace after training
                   </label>
                 </div>
@@ -682,6 +704,26 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                     >
                       Model Saved
                     </Button>
+                  </div>
+                )}
+                {!training && analysis === "Training complete" && (
+                  <div className="text-sm text-green-300 mt-2 space-y-1">
+                    {ollamaModel && (
+                      <div>
+                        Loaded into Ollama as{" "}
+                        <span className="font-semibold">{ollamaModel}</span>
+                      </div>
+                    )}
+                    {ggufPath && (
+                      <div>
+                        GGUF path: <code>{ggufPath}</code>
+                      </div>
+                    )}
+                    {hfRepoId && (
+                      <div>
+                        Pushed to HF repo <code>{hfRepoId}</code>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>

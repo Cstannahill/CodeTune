@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import Playground from "./Playground";
 import { FineTuningDemo } from "./FineTuningDemo";
-import { fetchSavedModels, type SavedModel, pushHFModel } from "@/services/api";
+import {
+  fetchSavedModels,
+  type SavedModel,
+  pushHFModel,
+  createOllamaModel,
+} from "@/services/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -80,7 +85,7 @@ export default function Dashboard() {
     try {
       await updateModelName(id, editName.trim());
       setModels((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, name: editName.trim() } : m))
+        prev.map((m) => (m.id === id ? { ...m, name: editName.trim() } : m)),
       );
       toast.success("Model name updated");
       cancelEdit();
@@ -101,6 +106,22 @@ export default function Dashboard() {
       toast.success("Pushed to HuggingFace");
     } catch {
       toast.error("Push failed");
+    }
+  };
+
+  const loadToOllama = async (model: SavedModel) => {
+    if (!model.local_path) {
+      toast.error("Model path unknown");
+      return;
+    }
+    const modelfile = prompt("Path to Modelfile", "");
+    if (!modelfile) return;
+    const gguf = prompt("Path to GGUF file (optional)", "");
+    try {
+      await createOllamaModel(model.name, modelfile, gguf || undefined);
+      toast.success("Loaded into Ollama");
+    } catch {
+      toast.error("Failed to load model");
     }
   };
 
@@ -192,13 +213,22 @@ export default function Dashboard() {
                             </span>
                           )}
                           {m.local_path && (
-                            <Button
-                              size="sm"
-                              className="ml-2 bg-primary hover:bg-primary/80"
-                              onClick={() => pushModel(m)}
-                            >
-                              Push to HF
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                className="ml-2 bg-primary hover:bg-primary/80"
+                                onClick={() => pushModel(m)}
+                              >
+                                Push to HF
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="ml-2 bg-secondary hover:bg-secondary/80"
+                                onClick={() => loadToOllama(m)}
+                              >
+                                Load to Ollama
+                              </Button>
+                            </>
                           )}
                         </div>
                       </div>
