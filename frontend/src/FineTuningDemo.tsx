@@ -113,6 +113,32 @@ export function FineTuningDemo() {
   const [ggufPath, setGgufPath] = useState<string | null>(null);
   const [hfRepoId, setHfRepoId] = useState<string | null>(null);
 
+  // Load persisted settings on mount
+  useEffect(() => {
+    const dsId = localStorage.getItem("codetune_dataset_id");
+    const dsName = localStorage.getItem("codetune_dataset_name");
+    if (dsId) setDatasetId(dsId);
+    if (dsName) {
+      const f = new File([""], dsName);
+      setDatasetFile(f);
+    }
+    const params = localStorage.getItem("codetune_train_params");
+    if (params) {
+      try {
+        const p = JSON.parse(params);
+        if (p.epochs) setEpochs(p.epochs);
+        if (p.trainingSteps) setTrainingSteps(p.trainingSteps);
+        if (p.learningRate) setLearningRate(p.learningRate);
+        if (p.quantization) setQuantization(p.quantization);
+        if (p.modelName) setModelName(p.modelName);
+        if (p.trainingModel) setTrainingModel(p.trainingModel);
+        if (p.pushToHf) setPushToHf(p.pushToHf);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
   useEffect(() => {
     fetchSavedModels()
       .then(setSavedModels)
@@ -149,6 +175,8 @@ export function FineTuningDemo() {
       uploadDataset(file, setUploadProgress)
         .then((res) => {
           setDatasetId(res.dataset_id);
+          localStorage.setItem("codetune_dataset_id", res.dataset_id);
+          localStorage.setItem("codetune_dataset_name", file.name);
           toast.success("Dataset uploaded");
         })
         .catch(() => toast.error("Upload failed"))
@@ -166,6 +194,18 @@ export function FineTuningDemo() {
 
   const startTraining = async () => {
     if (!datasetId) return;
+    localStorage.setItem(
+      "codetune_train_params",
+      JSON.stringify({
+        epochs,
+        trainingSteps,
+        learningRate,
+        quantization,
+        modelName,
+        trainingModel,
+        pushToHf,
+      }),
+    );
     setTraining(true);
     setTrainingProgress(0);
     setAnalysis(null);
@@ -176,18 +216,27 @@ export function FineTuningDemo() {
     setTrainingHistory([]);
     setStartTime(Date.now());
     setTimeRemaining(null);
-    const task = await createTuning({
-      dataset_id: datasetId,
-      parameters: {
-        repo_id: trainingModel,
-        name: modelName,
-        push: pushToHf,
-        epochs,
-        trainingSteps,
-        learningRate,
-        quantization,
-      },
-    });
+    let task;
+    try {
+      task = await createTuning({
+        dataset_id: datasetId,
+        parameters: {
+          repo_id: trainingModel,
+          name: modelName,
+          push: pushToHf,
+          epochs,
+          trainingSteps,
+          learningRate,
+          quantization,
+        },
+      });
+    } catch (e) {
+      setTraining(false);
+      toast.error(
+        e instanceof Error ? e.message : "Failed to start training"
+      );
+      return;
+    }
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(async () => {
       try {
@@ -213,6 +262,9 @@ export function FineTuningDemo() {
           if ("loss" in prog.result) {
             setQualityLoss(prog.result.loss as number);
           }
+          if ("loss_history" in prog.result) {
+            setTrainingHistory(prog.result.loss_history as number[]);
+          }
           if ("gguf_path" in prog.result) {
             setGgufPath(prog.result.gguf_path as string);
           }
@@ -232,6 +284,12 @@ export function FineTuningDemo() {
               ? "Training complete"
               : "Training failed",
           );
+          if (prog.status === "completed" && prog.result) {
+            localStorage.setItem(
+              "codetune_last_result",
+              JSON.stringify(prog.result),
+            );
+          }
         }
       } catch {
         if (intervalRef.current) clearInterval(intervalRef.current);
