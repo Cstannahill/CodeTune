@@ -55,6 +55,20 @@ The API exposes the following new endpoints:
 - `POST /api/v1/user-models/import/{model_id}` - start a new tuning job from a saved model
 - `GET /api/v1/user-models/` - list saved models
 
+### Command line pipeline
+
+A helper script `scripts/hf_ollama_pipeline.py` automates the full workflow. It
+downloads a base model, optionally fine-tunes it on a text dataset, converts the
+result to GGUF, and loads it into Ollama:
+
+```bash
+python scripts/hf_ollama_pipeline.py <repo_id> <hf_token> <hf_user> <name> Modelfile \
+  --dataset train.txt --epochs 1 --push
+```
+
+The script requires the `llama.cpp` `convert.py` utility to be available (use
+`--converter-script` to specify its path).
+
 ## Development
 
 Create a `.env` file (see `.env.example`) or set the following environment variables:
