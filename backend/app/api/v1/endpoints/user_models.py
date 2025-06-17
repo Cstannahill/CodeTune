@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from bson import ObjectId
 import logging
 
@@ -70,3 +70,15 @@ async def delete_model(
     if not deleted:
         raise HTTPException(status_code=404, detail="Model not found")
     return {"status": "ok"}
+
+
+@router.post("/{model_id}/rename", response_model=SavedModel)
+async def rename_model(
+    model_id: PyObjectId,
+    name: str = Body(..., embed=True),
+    service: ModelService = Depends(get_model_service),
+):
+    updated = await service.rename_model(ObjectId(model_id), name)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Model not found")
+    return updated

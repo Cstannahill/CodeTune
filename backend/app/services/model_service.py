@@ -1,6 +1,7 @@
 from datetime import datetime
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo import ReturnDocument
 import os
 import json
 
@@ -67,3 +68,12 @@ class ModelService:
     async def delete_model(self, model_id: ObjectId) -> bool:
         res = await self.collection.delete_one({"_id": model_id})
         return res.deleted_count == 1
+
+    async def rename_model(self, model_id: ObjectId, name: str) -> SavedModel | None:
+        """Update the name of a saved model and return the updated document."""
+        doc = await self.collection.find_one_and_update(
+            {"_id": model_id},
+            {"$set": {"name": name, "updated_at": datetime.utcnow()}},
+            return_document=ReturnDocument.AFTER,
+        )
+        return SavedModel(**doc) if doc else None

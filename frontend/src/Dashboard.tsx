@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Playground from "./Playground";
 import { FineTuningDemo } from "./FineTuningDemo";
-import { fetchSavedModels, type SavedModel } from "@/services/api";
+import { fetchSavedModels, type SavedModel, pushHFModel } from "@/services/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import HFModelBrowserPage from "@/components/aicomponent/HFModelBrowserPage";
 
 // Add updateModelName API helper
 async function updateModelName(id: string, name: string) {
-  const res = await fetch(`/api/v1/models/${id}/rename`, {
+  const res = await fetch(`/api/v1/user-models/${id}/rename`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name }),
@@ -86,6 +86,21 @@ export default function Dashboard() {
       cancelEdit();
     } catch {
       toast.error("Failed to update name");
+    }
+  };
+
+  const pushModel = async (model: SavedModel) => {
+    if (!model.local_path) {
+      toast.error("Model path unknown");
+      return;
+    }
+    const repoName = prompt("HuggingFace repo name", model.name);
+    if (!repoName) return;
+    try {
+      await pushHFModel(model.local_path, repoName);
+      toast.success("Pushed to HuggingFace");
+    } catch {
+      toast.error("Push failed");
     }
   };
 
@@ -175,6 +190,15 @@ export default function Dashboard() {
                             <span className="ml-2 text-purple-300">
                               Loss: {String(m.result?.loss)}
                             </span>
+                          )}
+                          {m.local_path && (
+                            <Button
+                              size="sm"
+                              className="ml-2 bg-primary hover:bg-primary/80"
+                              onClick={() => pushModel(m)}
+                            >
+                              Push to HF
+                            </Button>
                           )}
                         </div>
                       </div>

@@ -108,6 +108,7 @@ export function FineTuningDemo() {
   const [modelName, setModelName] = useState<string>("No Name");
   const [editingModelName, setEditingModelName] = useState(false);
   const [modelNameEdit, setModelNameEdit] = useState<string | null>(null);
+  const [pushToHf, setPushToHf] = useState(false);
 
   useEffect(() => {
     fetchSavedModels()
@@ -172,6 +173,9 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const task = await createTuning({
       dataset_id: datasetId,
       parameters: {
+        repo_id: trainingModel,
+        name: modelName,
+        push: pushToHf,
         epochs,
         trainingSteps,
         learningRate,
@@ -202,6 +206,7 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (prog.result && "loss" in prog.result) {
           setQualityLoss(prog.result.loss as number);
         }
+        setAnalysis(prog.status);
         if (prog.status === "completed" || prog.status === "failed") {
           if (intervalRef.current) clearInterval(intervalRef.current);
           setTraining(false);
@@ -421,6 +426,17 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                     <Progress value={uploadProgress} className="h-2" />
                   )}
                 </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
+                    Model Name
+                  </label>
+                  <Input
+                    value={modelName}
+                    onChange={(e) => setModelName(e.target.value)}
+                    placeholder="Name for new model"
+                    className="w-64 bg-card border border-border text-primary"
+                  />
+                </div>
                 {savedModels.length > 0 && (
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-muted-foreground">
@@ -528,6 +544,18 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                     smaller but less precise.
                   </p>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="pushhf"
+                    type="checkbox"
+                    className="accent-purple-500"
+                    checked={pushToHf}
+                    onChange={(e) => setPushToHf(e.target.checked)}
+                  />
+                  <label htmlFor="pushhf" className="text-sm text-muted-foreground">
+                    Push to HuggingFace after training
+                  </label>
+                </div>
                 <Button
                   onClick={startTraining}
                   disabled={training || !datasetId || uploading}
@@ -578,8 +606,8 @@ const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                 )}
                 {analysis && (
                   <div className="text-sm text-gray-300">
-                    {analysis}{" "}
-                    {qualityLoss !== null && `(Quality loss: ${qualityLoss}%)`}
+                    {analysis.replace(/_/g, " ")}
+                    {qualityLoss !== null && ` (loss: ${qualityLoss})`}
                   </div>
                 )}
                 {!training &&
