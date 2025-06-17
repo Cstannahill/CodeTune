@@ -215,6 +215,7 @@ export async function pushHFModel(
 
 export interface UserSettings {
   local_model_dir?: string;
+  dataset_dir?: string;
   hf_token?: string;
   hf_user?: string;
 }
@@ -234,5 +235,40 @@ export async function updateSettings(
     body: JSON.stringify(settings),
   });
   if (!res.ok) throw new Error("Failed to update settings");
+  return res.json();
+}
+
+// Dataset endpoints
+export async function uploadDataset(
+  file: File,
+  onProgress?: (pct: number) => void
+): Promise<{ dataset_id: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${API_URL}/api/v1/datasets/upload`);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        reject(new Error("Upload failed"));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Upload failed"));
+    if (xhr.upload && onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          onProgress((e.loaded / e.total) * 100);
+        }
+      };
+    }
+    const data = new FormData();
+    data.append("file", file);
+    xhr.send(data);
+  });
+}
+
+export async function listDatasets(): Promise<string[]> {
+  const res = await fetch(`${API_URL}/api/v1/datasets/`);
+  if (!res.ok) throw new Error("Failed to list datasets");
   return res.json();
 }

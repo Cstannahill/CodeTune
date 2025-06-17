@@ -43,6 +43,13 @@ The typical workflow to fine-tune and serve a model locally is:
 Once created, the model can be listed with `/api/v1/ollama/models` and used for
 chat completions via `/api/v1/ollama/chat`.
 
+### Dataset Upload
+
+Datasets can be uploaded via `POST /api/v1/datasets/upload` which accepts a
+file. Uploaded datasets are stored under the directory configured in the
+settings file (defaults to `datasets`). They can be listed with
+`GET /api/v1/datasets/`.
+
 The API exposes the following new endpoints:
 
 - `GET /api/v1/ollama/models` - list locally available models

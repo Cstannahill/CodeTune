@@ -15,6 +15,7 @@ import { getSettings, updateSettings } from "@/services/api";
 
 export default function Settings() {
   const [localDir, setLocalDir] = useState("");
+  const [datasetDir, setDatasetDir] = useState("");
   const [hfToken, setHfToken] = useState("");
   const [hfUser, setHfUser] = useState("");
   const [showHfDialog, setShowHfDialog] = useState(false);
@@ -24,6 +25,7 @@ export default function Settings() {
     getSettings()
       .then((settings) => {
         setLocalDir(settings.local_model_dir || "");
+        setDatasetDir(settings.dataset_dir || "");
         setHfToken(settings.hf_token || "");
         setHfUser(settings.hf_user || "");
       })
@@ -36,6 +38,7 @@ export default function Settings() {
     try {
       await updateSettings({
         local_model_dir: localDir,
+        dataset_dir: datasetDir,
         hf_token: hfToken,
         hf_user: hfUser,
       });
@@ -49,6 +52,7 @@ export default function Settings() {
     try {
       await updateSettings({
         local_model_dir: localDir,
+        dataset_dir: datasetDir,
         hf_token: hfToken,
         hf_user: hfUser,
       });
@@ -77,11 +81,20 @@ export default function Settings() {
               placeholder="e.g. C:\\models or /home/user/models"
               className="bg-card border border-border text-primary"
             />
+            <label className="block text-sm text-muted-foreground mb-1 mt-4">
+              Dataset Directory
+            </label>
+            <Input
+              value={datasetDir}
+              onChange={(e) => setDatasetDir(e.target.value)}
+              placeholder="e.g. ./datasets"
+              className="bg-card border border-border text-primary"
+            />
             <Button
               className="mt-2"
               variant="outline"
               onClick={handleSaveDirectory}
-              disabled={!localDir.trim()}
+              disabled={!localDir.trim() || !datasetDir.trim()}
             >
               Save Directory
             </Button>
