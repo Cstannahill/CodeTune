@@ -69,6 +69,14 @@ python scripts/hf_ollama_pipeline.py <repo_id> <hf_token> <hf_user> <name> Model
 The script requires the `llama.cpp` `convert.py` utility to be available (use
 `--converter-script` to specify its path).
 
+### Background tuning worker
+
+When the backend starts it launches a background `TuningWorker` that watches for
+queued tuning tasks. Each task should contain Hugging Face credentials and a
+`repo_id`, along with training parameters. The worker downloads the base model,
+fine-tunes it on the provided dataset, converts the result to GGUF and finally
+creates the Ollama model. Progress can be polled via `/api/v1/tuning/{id}/progress`.
+
 ## Development
 
 Create a `.env` file (see `.env.example`) or set the following environment variables:
