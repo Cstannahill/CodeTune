@@ -91,6 +91,7 @@ export function FineTuningDemo() {
   const [trainingProgress, setTrainingProgress] = useState(0);
   const [qualityLoss, setQualityLoss] = useState<number | null>(null);
   const [analysis, setAnalysis] = useState<string | null>(null);
+  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const [assistantMessages, setAssistantMessages] = useState<SimpleMessage[]>(
     [],
   );
@@ -119,6 +120,26 @@ export function FineTuningDemo() {
   const [ggufPath, setGgufPath] = useState<string | null>(null);
   const [hfRepoId, setHfRepoId] = useState<string | null>(null);
   const [modelDir, setModelDir] = useState<string | null>(null);
+  const STEP_ORDER = [
+    "queued",
+    "downloading",
+    "training",
+    "training_complete",
+    "converting",
+    "creating_model",
+    "completed",
+    "failed",
+  ];
+  const STEP_LABELS: Record<string, string> = {
+    queued: "Queued",
+    downloading: "Downloading",
+    training: "Training",
+    training_complete: "Training Complete",
+    converting: "Converting",
+    creating_model: "Creating Ollama Model",
+    completed: "Completed",
+    failed: "Failed",
+  };
 
   // Load persisted settings on mount
   useEffect(() => {
@@ -141,6 +162,17 @@ export function FineTuningDemo() {
         /* ignore */
       }
     }
+  }, []);
+
+  // Resume polling if a training task is already in progress
+  useEffect(() => {
+    const existing = localStorage.getItem("codetune_task_id");
+    if (existing) {
+      setTraining(true);
+      setStartTime(Date.now());
+      startPolling(existing);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -249,12 +281,18 @@ export function FineTuningDemo() {
       );
       return;
     }
+    localStorage.setItem("codetune_task_id", task.id);
+    startPolling(task.id);
+  };
+
+  const startPolling = (id: string) => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(async () => {
       try {
-        const prog = await getTuningProgress(task.id);
+        const prog = await getTuningProgress(id);
         const pct = prog.progress <= 1 ? prog.progress * 100 : prog.progress;
         setTrainingProgress(Math.round(pct));
+        setCurrentStatus(prog.status);
         // Estimate time remaining
         if (startTime && pct > 0 && pct < 100) {
           const elapsed = (Date.now() - startTime) / 1000; // seconds
@@ -291,14 +329,15 @@ export function FineTuningDemo() {
           }
         }
         setAnalysis(prog.status);
+        setCurrentStatus(prog.status);
         if (prog.status === "completed" || prog.status === "failed") {
           if (intervalRef.current) clearInterval(intervalRef.current);
           setTraining(false);
           setAnalysis(
-            prog.status === "completed"
-              ? "Training complete"
-              : "Training failed",
+            prog.status === "completed" ? "Training complete" : "Training failed",
           );
+          localStorage.removeItem("codetune_task_id");
+          setCurrentStatus(prog.status);
           if (prog.status === "completed" && prog.result) {
             localStorage.setItem(
               "codetune_last_result",
@@ -703,6 +742,14 @@ export function FineTuningDemo() {
                 )}
                 {training && (
                   <div className="w-full flex flex-col items-center gap-2">
+                    <div className="flex w-full gap-1 mb-1">
+                      {STEP_ORDER.slice(0, STEP_ORDER.length - 1).map((s, i) => (
+                        <div
+                          key={s}
+                          className={`flex-1 h-1 rounded ${i <= STEP_ORDER.indexOf(currentStatus || "") ? "bg-purple-500" : "bg-gray-700"}`}
+                        ></div>
+                      ))}
+                    </div>
                     <div className="w-full relative flex items-center justify-center">
                       <Progress
                         value={trainingProgress}
@@ -721,9 +768,7 @@ export function FineTuningDemo() {
                       </span>
                     )}
                     <span className="text-xs text-purple-300 tracking-wide animate-pulse">
-                      {trainingProgress < 100
-                        ? `Training in progress...`
-                        : analysis || "Training complete!"}
+                      {STEP_LABELS[currentStatus || "queued"]}
                     </span>
                   </div>
                 )}
