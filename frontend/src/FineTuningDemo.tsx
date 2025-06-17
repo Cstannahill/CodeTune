@@ -118,6 +118,7 @@ export function FineTuningDemo() {
   const [pushToHf, setPushToHf] = useState(false);
   const [ollamaModel, setOllamaModel] = useState<string | null>(null);
   const [ggufPath, setGgufPath] = useState<string | null>(null);
+  const [quantizedPath, setQuantizedPath] = useState<string | null>(null);
   const [hfRepoId, setHfRepoId] = useState<string | null>(null);
   const [modelDir, setModelDir] = useState<string | null>(null);
   const STEP_ORDER = [
@@ -126,6 +127,7 @@ export function FineTuningDemo() {
     "training",
     "training_complete",
     "converting",
+    "quantizing",
     "creating_model",
     "completed",
     "failed",
@@ -136,6 +138,7 @@ export function FineTuningDemo() {
     training: "Training",
     training_complete: "Training Complete",
     converting: "Converting",
+    quantizing: "Quantizing",
     creating_model: "Creating Ollama Model",
     completed: "Completed",
     failed: "Failed",
@@ -255,6 +258,7 @@ export function FineTuningDemo() {
     setQualityLoss(null);
     setOllamaModel(null);
     setGgufPath(null);
+    setQuantizedPath(null);
     setHfRepoId(null);
     setModelDir(null);
     setTrainingHistory([]);
@@ -317,6 +321,9 @@ export function FineTuningDemo() {
           }
           if ("gguf_path" in prog.result) {
             setGgufPath(prog.result.gguf_path as string);
+          }
+          if ("quantized_path" in prog.result) {
+            setQuantizedPath(prog.result.quantized_path as string);
           }
           if ("model_dir" in prog.result) {
             setModelDir(prog.result.model_dir as string);
@@ -863,6 +870,11 @@ export function FineTuningDemo() {
                     {ggufPath && (
                       <div>
                         GGUF path: <code>{ggufPath}</code>
+                      </div>
+                    )}
+                    {quantizedPath && (
+                      <div>
+                        Quantized path: <code>{quantizedPath}</code>
                       </div>
                     )}
                     {hfRepoId && (
