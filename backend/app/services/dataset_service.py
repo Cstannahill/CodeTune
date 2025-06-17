@@ -19,11 +19,25 @@ class DatasetService:
     def save_dataset(self, file: UploadFile) -> str:
         os.makedirs(self.dataset_dir, exist_ok=True)
         path = os.path.join(self.dataset_dir, file.filename)
-        with open(path, "wb") as dest:
-            shutil.copyfileobj(file.file, dest)
+        try:
+            with open(path, "wb") as dest:
+                shutil.copyfileobj(file.file, dest)
+        except Exception:
+            if os.path.exists(path):
+                os.remove(path)
+            raise
         return path
 
-    def list_datasets(self) -> list[str]:
+    def list_datasets(self) -> list[dict]:
         if not os.path.exists(self.dataset_dir):
             return []
-        return [f for f in os.listdir(self.dataset_dir) if os.path.isfile(os.path.join(self.dataset_dir, f))]
+        items: list[dict] = []
+        for f in os.listdir(self.dataset_dir):
+            path = os.path.join(self.dataset_dir, f)
+            if os.path.isfile(path):
+                try:
+                    size = os.path.getsize(path)
+                except OSError:
+                    size = 0
+                items.append({"name": f, "path": path, "size": size})
+        return items

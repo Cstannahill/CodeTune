@@ -1,5 +1,6 @@
 from .tuning import Tuning, TuningCreate, TuningProgress, PyObjectId
 from .model import SavedModel, SavedModelCreate
+from .dataset import DatasetInfo
 
 __all__ = [
     "Tuning",
@@ -7,5 +8,6 @@ __all__ = [
     "TuningProgress",
     "SavedModel",
     "SavedModelCreate",
+    "DatasetInfo",
     "PyObjectId",
 ]

@@ -51,6 +51,10 @@ import {
   getTuningProgress,
   fetchModels,
   fetchOllamaModels,
+  listDatasets,
+  type DatasetInfo,
+  uploadDataset,
+  pushHFModel,
 } from "@/services/api";
 import { ChatMessage as ChatMessageComponent } from "@/components/chat/ChatMessage";
 import { FineTuningPresetSelector } from "@/components/aicomponent/FineTuningPresetSelector";
@@ -100,6 +104,8 @@ export function FineTuningDemo() {
   const [availableModels, setAvailableModels] = useState<ModelItem[]>([
     { id: "None Selected", source: "ollama" },
   ]);
+  const [datasetOptions, setDatasetOptions] = useState<DatasetInfo[]>([]);
+  const [datasetName, setDatasetName] = useState<string | null>(null);
   const [trainingModel, setTrainingModel] = useState<string>("gpt-3.5-turbo");
   const [modelSaved, setModelSaved] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -112,16 +118,14 @@ export function FineTuningDemo() {
   const [ollamaModel, setOllamaModel] = useState<string | null>(null);
   const [ggufPath, setGgufPath] = useState<string | null>(null);
   const [hfRepoId, setHfRepoId] = useState<string | null>(null);
+  const [modelDir, setModelDir] = useState<string | null>(null);
 
   // Load persisted settings on mount
   useEffect(() => {
     const dsId = localStorage.getItem("codetune_dataset_id");
     const dsName = localStorage.getItem("codetune_dataset_name");
     if (dsId) setDatasetId(dsId);
-    if (dsName) {
-      const f = new File([""], dsName);
-      setDatasetFile(f);
-    }
+    if (dsName) setDatasetName(dsName);
     const params = localStorage.getItem("codetune_train_params");
     if (params) {
       try {
@@ -137,6 +141,12 @@ export function FineTuningDemo() {
         /* ignore */
       }
     }
+  }, []);
+
+  useEffect(() => {
+    listDatasets()
+      .then(setDatasetOptions)
+      .catch(() => setDatasetOptions([]));
   }, []);
 
   useEffect(() => {
@@ -175,6 +185,7 @@ export function FineTuningDemo() {
       uploadDataset(file, setUploadProgress)
         .then((res) => {
           setDatasetId(res.dataset_id);
+          setDatasetName(file.name);
           localStorage.setItem("codetune_dataset_id", res.dataset_id);
           localStorage.setItem("codetune_dataset_name", file.name);
           toast.success("Dataset uploaded");
@@ -213,6 +224,7 @@ export function FineTuningDemo() {
     setOllamaModel(null);
     setGgufPath(null);
     setHfRepoId(null);
+    setModelDir(null);
     setTrainingHistory([]);
     setStartTime(Date.now());
     setTimeRemaining(null);
@@ -267,6 +279,9 @@ export function FineTuningDemo() {
           }
           if ("gguf_path" in prog.result) {
             setGgufPath(prog.result.gguf_path as string);
+          }
+          if ("model_dir" in prog.result) {
+            setModelDir(prog.result.model_dir as string);
           }
           if ("repo_id" in prog.result) {
             setHfRepoId(prog.result.repo_id as string);
@@ -395,11 +410,11 @@ export function FineTuningDemo() {
   };
   const handleSaveModelNameEdit = async () => {
     try {
-      await updateModelName(savedModels[0]?.id, modelNameEdit.trim());
-      setModelName(modelNameEdit.trim());
+      await updateModelName(savedModels[0]?.id, modelNameEdit?.trim() || "");
+      setModelName(modelNameEdit?.trim() || "");
       setSavedModels((prev) =>
         prev.map((m, i) =>
-          i === 0 ? { ...m, name: modelNameEdit.trim() } : m,
+          i === 0 ? { ...m, name: modelNameEdit?.trim() || "" } : m,
         ),
       );
       toast.success("Model name updated");
@@ -496,13 +511,41 @@ export function FineTuningDemo() {
                     Upload Dataset
                   </label>
                   <Input type="file" onChange={handleDatasetChange} />
-                  {datasetFile && (
-                    <p className="text-xs text-gray-400">{datasetFile.name}</p>
+                  {(datasetFile || datasetName) && (
+                    <p className="text-xs text-gray-400">{datasetName || datasetFile?.name}</p>
                   )}
                   {uploading && (
                     <Progress value={uploadProgress} className="h-2" />
                   )}
                 </div>
+                {datasetOptions.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1">
+                      Or Select Existing Dataset
+                    </label>
+                    <Select
+                      value={datasetId ?? ""}
+                      onValueChange={(val) => {
+                        setDatasetId(val);
+                        const ds = datasetOptions.find((d) => d.path === val);
+                        setDatasetName(ds ? ds.name : null);
+                        localStorage.setItem("codetune_dataset_id", val);
+                        if (ds) localStorage.setItem("codetune_dataset_name", ds.name);
+                      }}
+                    >
+                      <SelectTrigger className="w-64 bg-card border border-border">
+                        <SelectValue placeholder="Choose dataset" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {datasetOptions.map((d) => (
+                          <SelectItem key={d.path} value={d.path}>
+                            {d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-muted-foreground mb-1">
                     Model Name
@@ -705,7 +748,7 @@ export function FineTuningDemo() {
                       <Button
                         onClick={handleSaveModel}
                         disabled={
-                          modelSaved || !datasetFile || qualityLoss === null
+                          modelSaved || !datasetId || qualityLoss === null
                         }
                         className="bg-secondary hover:bg-secondary/80"
                       >
@@ -718,7 +761,7 @@ export function FineTuningDemo() {
                     {editingModelName ? (
                       <>
                         <Input
-                          value={modelNameEdit}
+                          value={modelNameEdit ?? ""}
                           onChange={(e) => setModelNameEdit(e.target.value)}
                           className="w-64 bg-card border border-border text-primary"
                           maxLength={64}
@@ -781,6 +824,24 @@ export function FineTuningDemo() {
                       <div>
                         Pushed to HF repo <code>{hfRepoId}</code>
                       </div>
+                    )}
+                    {!hfRepoId && modelDir && (
+                      <Button
+                        size="sm"
+                        className="bg-primary hover:bg-primary/80"
+                        onClick={async () => {
+                          try {
+                            await pushHFModel(modelDir, modelName);
+                            toast.success("Pushed to HuggingFace");
+                          } catch (e) {
+                            toast.error(
+                              e instanceof Error ? e.message : "Push failed",
+                            );
+                          }
+                        }}
+                      >
+                        Push to HuggingFace
+                      </Button>
                     )}
                   </div>
                 )}

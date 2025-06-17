@@ -15,3 +15,4 @@ class SavedModel(DBModelMixin):
     parameters: dict | None = None
     result: dict | None = None
     local_path: str | None = None  # Add this field for save location
+    hf_repo_id: str | None = None
