@@ -11,6 +11,7 @@ SETTINGS_FILE = os.environ.get("CODETUNE_SETTINGS_FILE", "settings.json")
 
 class SettingsUpdate(BaseModel):
     local_model_dir: str | None = None
+    dataset_dir: str | None = None
     hf_token: str | None = None
     hf_user: str | None = None
 
@@ -24,6 +25,7 @@ def get_settings():
     # fallback to env/config
     return SettingsUpdate(
         local_model_dir=None,
+        dataset_dir=None,
         hf_token=settings.huggingface_token,
         hf_user=None,
     )

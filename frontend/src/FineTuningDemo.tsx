@@ -77,6 +77,9 @@ export function FineTuningDemo() {
   }
   const [activeTab, setActiveTab] = useState("tuning");
   const [datasetFile, setDatasetFile] = useState<File | null>(null);
+  const [datasetId, setDatasetId] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [uploading, setUploading] = useState(false);
   const [epochs, setEpochs] = useState(3);
   const [trainingSteps, setTrainingSteps] = useState(1000);
   const [learningRate, setLearningRate] = useState(0.00005);
@@ -133,11 +136,21 @@ export function FineTuningDemo() {
     };
   }, []);
 
-  const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setDatasetFile(e.target.files[0]);
-    }
-  };
+const handleDatasetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setDatasetFile(file);
+      setUploading(true);
+      setUploadProgress(0);
+      uploadDataset(file, setUploadProgress)
+        .then((res) => {
+          setDatasetId(res.dataset_id);
+          toast.success("Dataset uploaded");
+        })
+        .catch(() => toast.error("Upload failed"))
+        .finally(() => setUploading(false));
+  }
+};
 
   const applyPreset = (p: FineTuningPreset) => {
     setPreset(p);
@@ -148,7 +161,7 @@ export function FineTuningDemo() {
   };
 
   const startTraining = async () => {
-    if (!datasetFile) return;
+    if (!datasetId) return;
     setTraining(true);
     setTrainingProgress(0);
     setAnalysis(null);
@@ -157,7 +170,7 @@ export function FineTuningDemo() {
     setStartTime(Date.now());
     setTimeRemaining(null);
     const task = await createTuning({
-      dataset_id: datasetFile.name,
+      dataset_id: datasetId,
       parameters: {
         epochs,
         trainingSteps,
@@ -207,11 +220,11 @@ export function FineTuningDemo() {
   };
 
   const handleSaveModel = async () => {
-    if (!datasetFile || qualityLoss === null || modelSaved) return;
+    if (!datasetId || qualityLoss === null || modelSaved) return;
     const name = modelName.trim() || `model-${Date.now()}`;
     const payload = {
       name,
-      dataset_id: datasetFile.name,
+      dataset_id: datasetId,
       parameters: { epochs, trainingSteps, learningRate, quantization },
       result: { loss: qualityLoss },
     };
@@ -404,6 +417,9 @@ export function FineTuningDemo() {
                   {datasetFile && (
                     <p className="text-xs text-gray-400">{datasetFile.name}</p>
                   )}
+                  {uploading && (
+                    <Progress value={uploadProgress} className="h-2" />
+                  )}
                 </div>
                 {savedModels.length > 0 && (
                   <div className="space-y-1">
@@ -514,7 +530,7 @@ export function FineTuningDemo() {
                 </div>
                 <Button
                   onClick={startTraining}
-                  disabled={training || !datasetFile}
+                  disabled={training || !datasetId || uploading}
                   className="bg-primary hover:bg-primary/80"
                 >
                   <Brain className="w-4 h-4 mr-2" />
@@ -525,7 +541,7 @@ export function FineTuningDemo() {
                     onClick={handleSaveModel}
                     disabled={
                       training ||
-                      !datasetFile ||
+                      !datasetId ||
                       qualityLoss === null ||
                       modelSaved
                     }
