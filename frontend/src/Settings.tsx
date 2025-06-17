@@ -20,14 +20,22 @@ export default function Settings() {
   const [hfUser, setHfUser] = useState("");
   const [showHfDialog, setShowHfDialog] = useState(false);
 
-  // Load settings from backend on mount
+  // Load settings from backend/localStorage on mount
   useEffect(() => {
+    const ld = localStorage.getItem("codetune_local_dir");
+    const dd = localStorage.getItem("codetune_dataset_dir");
+    const ht = localStorage.getItem("codetune_hf_token");
+    const hu = localStorage.getItem("codetune_hf_user");
+    if (ld) setLocalDir(ld);
+    if (dd) setDatasetDir(dd);
+    if (ht) setHfToken(ht);
+    if (hu) setHfUser(hu);
     getSettings()
       .then((settings) => {
-        setLocalDir(settings.local_model_dir || "");
-        setDatasetDir(settings.dataset_dir || "");
-        setHfToken(settings.hf_token || "");
-        setHfUser(settings.hf_user || "");
+        if (settings.local_model_dir) setLocalDir(settings.local_model_dir);
+        if (settings.dataset_dir) setDatasetDir(settings.dataset_dir);
+        if (settings.hf_token) setHfToken(settings.hf_token);
+        if (settings.hf_user) setHfUser(settings.hf_user);
       })
       .catch(() => {
         toast.error("Failed to load settings");
@@ -43,6 +51,8 @@ export default function Settings() {
         hf_user: hfUser,
       });
       toast.success("Model directory saved!");
+      localStorage.setItem("codetune_local_dir", localDir);
+      localStorage.setItem("codetune_dataset_dir", datasetDir);
     } catch {
       toast.error("Failed to save directory");
     }
@@ -58,6 +68,8 @@ export default function Settings() {
       });
       toast.success("HuggingFace credentials saved!");
       setShowHfDialog(false);
+      localStorage.setItem("codetune_hf_token", hfToken);
+      localStorage.setItem("codetune_hf_user", hfUser);
     } catch {
       toast.error("Failed to save HuggingFace credentials");
     }

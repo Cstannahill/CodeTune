@@ -6,6 +6,8 @@ import {
   type SavedModel,
   pushHFModel,
   createOllamaModel,
+  listDatasets,
+  type DatasetInfo,
 } from "@/services/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,11 +69,15 @@ export default function Dashboard() {
     }
   }, [active]);
 
-  // Datasets stub (replace with real API if available)
-  const [datasets] = useState([
-    { name: "example-dataset.jsonl", size: "1.2MB", samples: 1000 },
-    { name: "reviews.jsonl", size: "800KB", samples: 500 },
-  ]);
+  const [datasets, setDatasets] = useState<DatasetInfo[]>([]);
+
+  useEffect(() => {
+    if (active === "datasets") {
+      listDatasets()
+        .then(setDatasets)
+        .catch(() => setDatasets([]));
+    }
+  }, [active]);
 
   const startEdit = (id: string, name: string) => {
     setEditingId(id);
@@ -253,15 +259,13 @@ export default function Dashboard() {
                     <tr>
                       <th className="py-2">Name</th>
                       <th>Size</th>
-                      <th>Samples</th>
                     </tr>
                   </thead>
                   <tbody>
                     {datasets.map((d) => (
-                      <tr key={d.name}>
+                      <tr key={d.path}>
                         <td className="py-2">{d.name}</td>
-                        <td>{d.size}</td>
-                        <td>{d.samples}</td>
+                        <td>{(d.size / 1024).toFixed(1)} KB</td>
                       </tr>
                     ))}
                   </tbody>

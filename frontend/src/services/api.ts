@@ -2,6 +2,18 @@ const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 console.log("API_URL configured as:", API_URL);
 
+async function handleApiError(res: Response): Promise<never> {
+  const text = await res.text();
+  let detail = text;
+  try {
+    const obj = JSON.parse(text);
+    detail = obj.detail || obj.error?.message || text;
+  } catch {
+    // ignore
+  }
+  throw new Error(detail);
+}
+
 export interface HFModel {
   id: string;
   downloads: number;
@@ -15,12 +27,8 @@ export async function fetchModels(): Promise<HFModel[]> {
 
   const res = await fetch(url);
   if (!res.ok) {
-    console.error(
-      "Failed to fetch Huggingface models:",
-      res.status,
-      res.statusText,
-    );
-    throw new Error(`Failed to load models: ${res.status} ${res.statusText}`);
+    console.error("Failed to fetch Huggingface models:", res.status);
+    await handleApiError(res);
   }
 
   const data = await res.json();
@@ -49,16 +57,8 @@ export async function assistantChat(
   });
   console.log("assistantChat response status:", res.status, res.statusText);
   if (!res.ok) {
-    const text = await res.text();
-    let detail = text;
-    try {
-      const obj = JSON.parse(text);
-      detail = obj.detail || text;
-    } catch {
-      // ignore JSON parse errors
-    }
-    console.error("assistantChat failed detail:", detail);
-    throw new Error(detail);
+    console.error("assistantChat error status:", res.status);
+    await handleApiError(res);
   }
   const data = await res.json();
   console.log("assistantChat response data:", data);
@@ -92,7 +92,7 @@ export interface TuningProgress {
 
 export async function fetchSavedModels(): Promise<SavedModel[]> {
   const res = await fetch(`${API_URL}/api/v1/user-models/`);
-  if (!res.ok) throw new Error("Failed to load saved models");
+  if (!res.ok) await handleApiError(res);
   return res.json();
 }
 
@@ -107,7 +107,7 @@ export async function saveModel(payload: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Save model failed");
+  if (!res.ok) await handleApiError(res);
   return res.json();
 }
 
@@ -115,7 +115,7 @@ export async function importModel(modelId: string) {
   const res = await fetch(`${API_URL}/api/v1/user-models/import/${modelId}`, {
     method: "POST",
   });
-  if (!res.ok) throw new Error("Import failed");
+  if (!res.ok) await handleApiError(res);
   return res.json();
 }
 
@@ -123,7 +123,7 @@ export async function deleteModel(modelId: string): Promise<void> {
   const res = await fetch(`${API_URL}/api/v1/user-models/${modelId}`, {
     method: "DELETE",
   });
-  if (!res.ok) throw new Error("Delete failed");
+  if (!res.ok) await handleApiError(res);
 }
 
 // Tuning endpoints
@@ -136,7 +136,7 @@ export async function createTuning(payload: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Start tuning failed");
+  if (!res.ok) await handleApiError(res);
   return res.json();
 }
 
@@ -144,7 +144,7 @@ export async function getTuningProgress(
   taskId: string,
 ): Promise<TuningProgress> {
   const res = await fetch(`${API_URL}/api/v1/tuning/${taskId}/progress`);
-  if (!res.ok) throw new Error("Progress request failed");
+  if (!res.ok) await handleApiError(res);
   return res.json();
 }
 
@@ -155,8 +155,8 @@ export async function fetchOllamaModels(): Promise<string[]> {
 
   const res = await fetch(url);
   if (!res.ok) {
-    console.error("Failed to fetch Ollama models:", res.status, res.statusText);
-    throw new Error(`Failed to list models: ${res.status} ${res.statusText}`);
+    console.error("Failed to fetch Ollama models:", res.status);
+    await handleApiError(res);
   }
 
   const data = await res.json();
@@ -170,7 +170,7 @@ export async function pullOllamaModel(model: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model }),
   });
-  if (!res.ok) throw new Error("Pull failed");
+  if (!res.ok) await handleApiError(res);
   return res.json();
 }
 
@@ -183,7 +183,7 @@ export async function ollamaChat(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages, model }),
   });
-  if (!res.ok) throw new Error("Ollama chat failed");
+  if (!res.ok) await handleApiError(res);
   const data = await res.json();
   return data.response as string;
 }
@@ -195,7 +195,7 @@ export async function pullHFModel(repo_id: string, local_dir?: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ repo_id, local_dir }),
   });
-  if (!res.ok) throw new Error("Pull failed");
+  if (!res.ok) await handleApiError(res);
   return res.json();
 }
 
@@ -209,7 +209,7 @@ export async function pushHFModel(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ local_dir, repo_name, private: isPrivate }),
   });
-  if (!res.ok) throw new Error("Push failed");
+  if (!res.ok) await handleApiError(res);
   return res.json();
 }
 
@@ -267,9 +267,15 @@ export async function uploadDataset(
   });
 }
 
-export async function listDatasets(): Promise<string[]> {
+export interface DatasetInfo {
+  name: string;
+  path: string;
+  size: number;
+}
+
+export async function listDatasets(): Promise<DatasetInfo[]> {
   const res = await fetch(`${API_URL}/api/v1/datasets/`);
-  if (!res.ok) throw new Error("Failed to list datasets");
+  if (!res.ok) await handleApiError(res);
   return res.json();
 }
 
@@ -283,5 +289,5 @@ export async function createOllamaModel(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, modelfile, gguf_path }),
   });
-  if (!res.ok) throw new Error("Create failed");
+  if (!res.ok) await handleApiError(res);
 }

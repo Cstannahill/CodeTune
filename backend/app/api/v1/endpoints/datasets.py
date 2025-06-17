@@ -1,11 +1,12 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from ...services.dataset_service import DatasetService
+from ...schemas.dataset import DatasetInfo
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
 service = DatasetService()
 
 
-@router.get("/")
+@router.get("/", response_model=list[DatasetInfo])
 async def list_datasets():
     return service.list_datasets()
 

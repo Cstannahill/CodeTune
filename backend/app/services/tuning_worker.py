@@ -188,6 +188,7 @@ class TuningWorker:
                 "model": name,
                 "loss": loss,
                 "loss_history": history,
+                "model_dir": output_dir,
             }
             if repo_id_pushed:
                 result["repo_id"] = repo_id_pushed
