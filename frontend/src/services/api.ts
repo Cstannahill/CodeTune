@@ -18,7 +18,7 @@ export async function fetchModels(): Promise<HFModel[]> {
     console.error(
       "Failed to fetch Huggingface models:",
       res.status,
-      res.statusText
+      res.statusText,
     );
     throw new Error(`Failed to load models: ${res.status} ${res.statusText}`);
   }
@@ -35,7 +35,7 @@ export interface ChatMessage {
 
 export async function assistantChat(
   messages: ChatMessage[],
-  model?: string
+  model?: string,
 ): Promise<string> {
   const url = `${API_URL}/api/v1/assistant/chat`;
   // Ensure CORS fetch with no credentials
@@ -141,7 +141,7 @@ export async function createTuning(payload: {
 }
 
 export async function getTuningProgress(
-  taskId: string
+  taskId: string,
 ): Promise<TuningProgress> {
   const res = await fetch(`${API_URL}/api/v1/tuning/${taskId}/progress`);
   if (!res.ok) throw new Error("Progress request failed");
@@ -176,7 +176,7 @@ export async function pullOllamaModel(model: string) {
 
 export async function ollamaChat(
   messages: ChatMessage[],
-  model: string
+  model: string,
 ): Promise<string> {
   const res = await fetch(`${API_URL}/api/v1/ollama/chat`, {
     method: "POST",
@@ -202,7 +202,7 @@ export async function pullHFModel(repo_id: string, local_dir?: string) {
 export async function pushHFModel(
   local_dir: string,
   repo_name: string,
-  isPrivate = true
+  isPrivate = true,
 ) {
   const res = await fetch(`${API_URL}/api/v1/models/push`, {
     method: "POST",
@@ -227,7 +227,7 @@ export async function getSettings(): Promise<UserSettings> {
 }
 
 export async function updateSettings(
-  settings: UserSettings
+  settings: UserSettings,
 ): Promise<UserSettings> {
   const res = await fetch(`${API_URL}/api/v1/settings`, {
     method: "POST",
@@ -241,7 +241,7 @@ export async function updateSettings(
 // Dataset endpoints
 export async function uploadDataset(
   file: File,
-  onProgress?: (pct: number) => void
+  onProgress?: (pct: number) => void,
 ): Promise<{ dataset_id: string }> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -271,4 +271,17 @@ export async function listDatasets(): Promise<string[]> {
   const res = await fetch(`${API_URL}/api/v1/datasets/`);
   if (!res.ok) throw new Error("Failed to list datasets");
   return res.json();
+}
+
+export async function createOllamaModel(
+  name: string,
+  modelfile: string,
+  gguf_path?: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/api/v1/ollama/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, modelfile, gguf_path }),
+  });
+  if (!res.ok) throw new Error("Create failed");
 }
