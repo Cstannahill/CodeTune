@@ -43,6 +43,8 @@ class TuningWorker:
         dataset_path: str,
         output_dir: str,
         epochs: int,
+        training_steps: int | None = None,
+        learning_rate: float | None = None,
         progress_cb: callable | None = None,
     ) -> tuple[float, list[float]]:
         dataset = load_dataset("text", data_files=dataset_path)
@@ -61,6 +63,8 @@ class TuningWorker:
             output_dir=output_dir,
             per_device_train_batch_size=1,
             num_train_epochs=epochs,
+            max_steps=training_steps if training_steps else -1,
+            learning_rate=learning_rate if learning_rate else 5e-5,
             logging_steps=10,
             save_strategy="no",
         )
@@ -106,6 +110,13 @@ class TuningWorker:
         cmd = ["python", script, model_dir, gguf_path]
         subprocess.run(cmd, check=True)
 
+    def quantize_gguf(self, gguf_path: str, mode: str, quantize_bin: str = "quantize") -> str:
+        """Optionally quantize the GGUF file using llama.cpp quantize utility."""
+        out_path = gguf_path.replace(".gguf", f"_{mode}.gguf")
+        cmd = [quantize_bin, gguf_path, out_path, mode]
+        subprocess.run(cmd, check=True)
+        return out_path
+
     async def run(self):
         self._running = True
         logger.info("TuningWorker started.")
@@ -136,6 +147,9 @@ class TuningWorker:
             name = doc["parameters"].get("name", str(task_id))
             dataset_path = doc.get("dataset_id")
             epochs = int(doc["parameters"].get("epochs", 1))
+            training_steps = int(doc["parameters"].get("trainingSteps", 0))
+            learning_rate = float(doc["parameters"].get("learningRate", 5e-5))
+            quantization = doc["parameters"].get("quantization", "none")
             push = bool(doc["parameters"].get("push", False))
             converter_script = doc["parameters"].get("converter_script", "convert.py")
 
@@ -160,7 +174,13 @@ class TuningWorker:
                 )
 
             loss, history = self.train_model(
-                model_dir, dataset_path, output_dir, epochs, progress_cb
+                model_dir,
+                dataset_path,
+                output_dir,
+                epochs,
+                training_steps,
+                learning_rate,
+                progress_cb,
             )
 
             await self.service.update_progress(
@@ -178,10 +198,16 @@ class TuningWorker:
             gguf_path = os.path.join(output_dir, "model.gguf")
             self.convert_to_gguf(output_dir, gguf_path, converter_script)
 
+            quantized_path = None
+            if quantization and quantization != "none":
+                await self.service.update_progress(task_id, 0.8, "quantizing")
+                quantized_path = self.quantize_gguf(gguf_path, quantization)
+
             await self.service.update_progress(task_id, 0.9, "creating_model")
             modelfile = os.path.join(output_dir, "Modelfile")
             service = OllamaService()
-            await service.create_model(name, modelfile, gguf_path)
+            model_source = quantized_path or gguf_path
+            await service.create_model(name, modelfile, model_source)
 
             result = {
                 "gguf_path": gguf_path,
@@ -189,7 +215,10 @@ class TuningWorker:
                 "loss": loss,
                 "loss_history": history,
                 "model_dir": output_dir,
+                "quantization": quantization,
             }
+            if quantized_path:
+                result["quantized_path"] = quantized_path
             if repo_id_pushed:
                 result["repo_id"] = repo_id_pushed
             await self.service.update_progress(task_id, 1.0, "completed", result=result)
